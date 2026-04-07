@@ -426,7 +426,7 @@
     </div>
     <div>
       <div class="header-title">Local Checkpoints & Backup Activity</div>
-      <div class="header-sub">Simple local-first backup tracking and version recovery</div>
+      <div class="header-sub">Simple local-first backup tracking and portable version recovery</div>
     </div>
   </div>
 
@@ -486,10 +486,11 @@
       <div class="backup-controls">
         <label class="btn btn-secondary" for="csv-input">Load CSV Log</label>
         <input id="csv-input" type="file" accept=".csv,text/csv" style="display:none" />
-        <span id="csv-file-name" class="muted">No CSV selected</span>
+        <span id="csv-file-name" class="muted">No CSV selected (recommended: ./versionControl/sampleLog.csv)</span>
         <button id="btn-create-backup" class="btn btn-primary">Create Backup Now</button>
       </div>
 
+      <div class="muted" style="margin-bottom:.2rem;">Designed for log file path: <code style="font-family:var(--mono);">./versionControl/sampleLog.csv</code></div>
       <div class="muted" style="margin-bottom:.65rem;">Direct local folder opening may be blocked by your browser.</div>
 
       <div class="filters">
@@ -752,28 +753,28 @@ function parseNumberValue(v) {
   return Number.isFinite(n) ? n : null;
 }
 
-function convertPathToFileUrl(path) {
+function normalizeRelativePath(path) {
+  const raw = normalizeText(path).replace(/\\/g, '/');
+  if (!raw) return '';
+  const cleaned = raw.replace(/^\.\//, '').replace(/^\/+/, '').trim();
+  return cleaned ? `./${cleaned}` : '';
+}
+
+function isPortableRelativePath(path) {
   const p = normalizeText(path);
-  if (!p) return '';
-  if (/^file:\/\//i.test(p)) return p;
+  if (!p) return false;
+  if (/^[a-zA-Z]:[\\/]/.test(p)) return false;
+  if (/^\\\\/.test(p)) return false;
+  if (/^\//.test(p)) return false;
+  if (/^file:\/\//i.test(p)) return false;
+  return true;
+}
 
-  const windowsDrive = p.match(/^([a-zA-Z]):[\\/](.*)$/);
-  if (windowsDrive) {
-    const drive = windowsDrive[1].toUpperCase();
-    const rest = windowsDrive[2].replace(/\\/g, '/');
-    return `file:///${drive}:/${encodeURI(rest)}`;
-  }
-
-  if (p.startsWith('\\\\')) {
-    const converted = p.replace(/\\/g, '/');
-    return `file:${encodeURI(converted)}`;
-  }
-
-  if (p.startsWith('/')) {
-    return `file://${encodeURI(p)}`;
-  }
-
-  return '';
+function convertPathToFileUrl(path) {
+  const normalized = normalizeRelativePath(path);
+  if (!normalized || !isPortableRelativePath(normalized)) return '';
+  const base = new URL('.', window.location.href);
+  return new URL(normalized.replace(/^\.\//, ''), base).href;
 }
 
 async function copyToClipboard(text) {
@@ -867,7 +868,8 @@ elSaveBtn.addEventListener('click', async () => {
   elSaveBtn.innerHTML = '<span class="spinner"></span> Saving…';
 
   try {
-    const checkpointsRoot = await getOrCreateDir(rootDirHandle, '_checkpoints');
+    const versionControlDir = await getOrCreateDir(rootDirHandle, 'versionControl');
+    const checkpointsRoot = await getOrCreateDir(versionControlDir, '_checkpoints');
     const baseName = selectedFile.name.replace(/\.[^.]+$/, '');
     const fileSlot = await getOrCreateDir(checkpointsRoot, baseName);
 
@@ -898,7 +900,13 @@ async function refreshVersions() {
   const versions = [];
 
   try {
-    const checkpointsRoot = await rootDirHandle.getDirectoryHandle('_checkpoints');
+    let checkpointsRoot;
+    try {
+      const versionControlDir = await rootDirHandle.getDirectoryHandle('versionControl');
+      checkpointsRoot = await versionControlDir.getDirectoryHandle('_checkpoints');
+    } catch {
+      checkpointsRoot = await rootDirHandle.getDirectoryHandle('_checkpoints');
+    }
     const fileSlot = await checkpointsRoot.getDirectoryHandle(baseName);
     for await (const [name, handle] of fileSlot.entries()) {
       if (handle.kind === 'directory') versions.push({ folderName: name, dirHandle: handle });
@@ -1087,7 +1095,8 @@ function mapCSVToBackupRows(csvRows) {
     const r = csvRows[i];
     const day = normalizeText(r[idxDay]);
     const backupDate = normalizeText(r[idxDate]);
-    const folderPath = normalizeText(r[idxPath]);
+    const folderPathRaw = normalizeText(r[idxPath]);
+    const folderPath = normalizeRelativePath(folderPathRaw);
     const filesRaw = normalizeText(r[idxFiles]);
     const typeRaw = normalizeText(r[idxType]);
 
@@ -1101,6 +1110,7 @@ function mapCSVToBackupRows(csvRows) {
       backupDate: backupDate || '—',
       parsedDate,
       folderPath,
+      hasPortablePath: isPortableRelativePath(folderPath),
       noOfFilesRaw: filesRaw || '—',
       noOfFiles: parseNumberValue(filesRaw),
       type: normalizedType(typeRaw)
@@ -1221,7 +1231,7 @@ function renderBackupTable() {
   const selectedId = selectedBackupRow ? selectedBackupRow.id : '';
 
   elBackupTableBody.innerHTML = filteredBackupRows.map(row => {
-    const fileLink = convertPathToFileUrl(row.folderPath);
+    const fileLink = row.hasPortablePath ? convertPathToFileUrl(row.folderPath) : '';
     return `
       <tr data-id="${row.id}" class="${selectedId === row.id ? 'selected' : ''}">
         <td>${escapeHtml(row.day)}</td>
@@ -1284,15 +1294,16 @@ function renderBackupTable() {
 }
 
 function attemptOpenPath(rawPath) {
-  const fileUrl = convertPathToFileUrl(rawPath);
+  const normalized = normalizeRelativePath(rawPath);
+  const fileUrl = convertPathToFileUrl(normalized);
   if (!fileUrl) {
-    toast('Cannot create a local link for this path. Copy the path and open it in your file explorer.', 'warn');
+    toast('This path is not a portable relative path. Copy the path and open it in your file explorer.', 'warn');
     return;
   }
 
   try {
     window.open(fileUrl, '_blank', 'noopener');
-    toast('Attempted to open folder link. Direct opening may be blocked by your browser.', 'warn');
+    toast('Attempted to open folder link. Direct local folder opening may be blocked by your browser.', 'warn');
   } catch {
     toast('Browser blocked opening this local path. Please copy the path and open it manually.', 'warn');
   }
@@ -1305,7 +1316,7 @@ async function handleCreateBackupNow() {
     return;
   }
 
-  toast('Backup trigger is not connected in this browser-only version. Please run the backup script from your system or desktop launcher.', 'warn');
+  toast('Backup trigger is not connected in this browser-only version. Please run the backup process from your system or company launcher.', 'warn');
 }
 
 elCreateBackupBtn.addEventListener('click', handleCreateBackupNow);
@@ -1378,7 +1389,7 @@ async function showBackupPreviewForRow(row) {
     await renderHandleItems(selectedFolderHandle, selectedFolderHandle.name, []);
   } else {
     const list = document.getElementById('preview-list');
-    list.innerHTML = '<div class="empty" style="padding:1rem;">Preview not available until this folder is selected through the browser.</div>';
+    list.innerHTML = '<div class="empty" style="padding:1rem;">This backup path can be viewed here after the folder is selected through the browser.</div>';
   }
 }
 
@@ -1502,7 +1513,25 @@ elBtnClearFilters.addEventListener('click', () => {
   applyBackupFilters();
 });
 
+async function tryLoadDefaultBackupLog() {
+  try {
+    const response = await fetch('./versionControl/sampleLog.csv');
+    if (!response.ok) return;
+    const text = await response.text();
+    const csvRows = parseCSV(text);
+    const mapped = mapCSVToBackupRows(csvRows);
+    originalBackupRows = mapped;
+    filteredBackupRows = mapped.slice();
+    elCsvFileName.textContent = './versionControl/sampleLog.csv';
+    applyBackupFilters();
+    renderSummary();
+    renderPreviewEmpty('Select a backup entry to preview its contents.');
+    toast(`Loaded ${mapped.length} backup entr${mapped.length === 1 ? 'y' : 'ies'} from default log.`, 'ok');
+  } catch {}
+}
+
 renderBackupTable();
+tryLoadDefaultBackupLog();
 </script>
 </body>
 </html>
