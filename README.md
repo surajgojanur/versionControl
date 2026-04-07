@@ -1,214 +1,169 @@
 # Local Checkpoints & Backup Activity Tool
 
-A simple, visual backup and checkpoint system for everyday users.
+## 2. Overview
 
----
+This project is a simple, local backup tool for people who do not use Git or command-line workflows.
 
-## 1) Overview
+It helps you create safe checkpoints of your working files, keep a history of backups, and review older versions in a visual dashboard.
 
-**Local Checkpoints & Backup Activity Tool** is a local-first project that helps you create and track backups of important files and folders without using complex developer tools.
+It is designed for non-technical users such as accountants, Excel users, and office teams who want a clear and reliable way to save work over time.
 
-It is designed for non-technical users such as:
-- Accountants
-- Office teams
-- Excel-heavy workflows
-- Anyone who wants “save points” for files
+Why this tool exists:
 
-### Why this exists
+- To make backups easy (double-click and done)
+- To avoid complex developer tools
+- To keep everything local and portable
+- To provide a clear history of what was backed up and when
 
-Many users need version history, but do not want to learn Git, command-line workflows, or cloud platforms.
-This tool provides a straightforward alternative:
-- Make a backup snapshot
-- Keep a readable log
-- Open a simple dashboard to review history
+## 3. Key Features
 
-> ✅ **This is NOT Git.**
->
-> It is a **simple, visual backup system** focused on local folders and easy recovery.
-
----
-
-## 2) Key Features
-
-- **Local-first backup system** (your data stays on your machine)
-- **No installation required for UI** (open `index.html` directly)
-- **CSV-based backup tracking** (easy to read in Excel)
-- **Filterable backup history** in the dashboard
-- **File-explorer-like preview** of backup records and paths
-- **Portable setup** (copy folder to another machine and keep working)
+- **Local-first backup system**
+  - Your files and backup history stay on your machine.
+- **No installation for UI**
+  - Open `index.html` directly in any modern browser.
 - **Works on Windows and Linux**
+  - Includes both `run_backup.bat` and `run_backup.sh`.
+- **Double-click backup execution**
+  - Easy backup trigger for everyday users.
+- **CSV-based backup history**
+  - Every backup is logged in `sampleLog.csv`.
+- **Backup filtering and search**
+  - Quickly find specific backup entries.
+- **File-explorer-like preview**
+  - View and access previous checkpoint folders.
+- **Portable (copy folder → works)**
+  - Move the project folder to another location or machine and keep using it.
 
----
+## 4. How It Works
 
-## 3) How It Works (Architecture)
+The flow is simple:
 
-The flow is intentionally simple:
+1. You run a backup script (`.bat` on Windows or `.sh` on Linux).
+2. A new backup folder is created with a timestamp.
+3. Your source files are copied into that backup folder.
+4. The CSV log is updated with a new entry.
+5. The web dashboard (`index.html`) reads the CSV and shows your backup history.
 
-**User → `backup_runner.py` → creates backup → updates CSV → `index.html` reads CSV**
+In short: **User runs script → backup created → CSV updated → HTML reads CSV**.
 
-### Step-by-step flow
+## 5. Setup Instructions
 
-1. You run the Python script (`backup_runner.py`) with a backup name/tag.
-2. The script creates a timestamped backup folder in `_checkpoints`.
-3. It copies your source files/folders into that backup folder.
-4. It adds a new line to `sampleLog.csv` with details about the backup.
-5. You open `index.html` to view and filter the backup history.
+1. Download or copy the full `versionControl/` folder to your computer.
+2. No installation is required for the web interface.
+3. Python is **not** required.
+4. Backup scripts are already included and ready to use.
 
----
+## 6. How to Create a Backup
 
-## 4) Installation / Setup
+### Windows
 
-No complex setup is required.
+Double-click:
 
-1. **Copy the entire project folder** (`versionControl/`) anywhere you want.
-2. **Make sure Python is installed** on your machine.
-   - Check with: `python --version`
-3. **No web server is needed** for the dashboard.
-4. **Open `index.html` in your browser** (double-click or open manually).
+`run_backup.bat`
 
----
+### Linux
 
-## 5) How to Create a Backup
-
-Run this command in the project folder:
+Run:
 
 ```bash
-python backup_runner.py first-save
+./run_backup.sh
 ```
 
-What this does:
-- Creates a **new backup folder** (timestamped)
-- Copies source files into that backup location
-- Updates the CSV backup log (`sampleLog.csv`) with a new record
+What happens automatically:
 
-You can replace `first-save` with any label you want (for example: `before-tax-update`, `month-end`, etc.).
+- A new timestamped backup folder is created
+- Files are copied from `MAINFILE/`
+- The CSV log is updated with backup details
 
----
-
-## 6) How to Use the Web App
+## 7. How to Use the Web App
 
 1. Open `index.html` in your browser.
 2. Go to the **Backup Log** tab.
-3. Load the CSV log (or use auto-load, if enabled).
-4. View your backup entries in a table.
-5. Use search/filter tools to find specific backups quickly.
-6. Click a row to preview details.
+3. Load the CSV log file (or use auto-load if available).
+4. View the list of backups.
+5. Use filters/search to narrow results.
+6. Click a row to preview that backup.
 7. Use actions such as:
    - **Open Folder**
    - **Copy Path**
 
----
+## 8. CSV Log Format
 
-## 7) CSV Log Format
+Example columns:
 
-The log uses this structure:
+`Day,Backup date,folder path,No. of files,Type`
 
-```csv
-Day,Backup date,folder path,No. of files,Type
-```
+What each column means:
 
-### Column meaning (simple)
+- **Day**: Weekday name for the backup (for example, Monday)
+- **Backup date**: Date/time when the backup was created
+- **folder path**: Relative path to the checkpoint folder
+- **No. of files**: Number of files copied in that backup
+- **Type**: Backup label/category (if used by your workflow)
 
-- **Day** → The weekday when backup was created (e.g., Monday)
-- **Backup date** → Date/time of the backup
-- **folder path** → Relative path to the backup folder
-- **No. of files** → Number of files copied in that backup
-- **Type** → Backup label/category (manual tag or mode)
-
-Because it is CSV, you can also open it in Excel for reporting or audit tracking.
-
----
-
-## 8) Folder Structure Explanation
+## 9. Folder Structure Explanation
 
 ```text
 versionControl/
 ├─ index.html
 ├─ README.md
-├─ backup_runner.py
+├─ run_backup.bat
+├─ run_backup.sh
 ├─ MAINFILE/
 └─ versionControl/
    ├─ sampleLog.csv
    └─ _checkpoints/
 ```
 
-### What each part means
+Simple explanation:
 
-- **`index.html`**  
-  Your visual dashboard for viewing backup activity.
+- **MAINFILE/**
+  - Your original working files (source files to back up).
+- **versionControl/_checkpoints/**
+  - Stores timestamped backup versions.
+- **versionControl/sampleLog.csv**
+  - Stores backup history entries used by the dashboard.
+- **index.html**
+  - Visual dashboard to browse backup activity.
+- **run_backup.bat / run_backup.sh**
+  - Scripts that create backups and update the log.
 
-- **`backup_runner.py`**  
-  Script that actually creates backups and updates the log.
+## 10. Important Notes
 
-- **`MAINFILE/`**  
-  Your source/original working data (the data you want to protect).
+- All paths are relative, so the project is portable.
+- No machine-specific absolute paths are required.
+- Some browsers may block opening folders directly for security reasons.
+- **Copy Path** is the most reliable option when direct folder opening is blocked.
+- Backups are created by the scripts, not by the browser page itself.
 
-- **`versionControl/sampleLog.csv`**  
-  History log of backups in simple spreadsheet format.
+## 11. Create Backup Now Button
 
-- **`versionControl/_checkpoints/`**  
-  Storage area for backup versions (timestamped snapshots).
-
----
-
-## 9) Important Notes (Very Important)
-
-- **All paths are relative** so the project is portable across machines.
-- Browser security rules may prevent **Open Folder** from working in some cases.
-- **Copy Path** is the most reliable option to locate backups.
-- Creating backups must be done externally via **Python script** (`backup_runner.py`).
-
----
-
-## 10) Create Backup Now Button
-
-If you see a **Create Backup Now** button in the UI:
-
-- It is currently a **placeholder** for future integration.
+- The **Create Backup Now** button is currently a placeholder.
 - Browsers cannot reliably run local system scripts directly for security reasons.
-- For now, always run backups using the command line Python script.
+- This button is included for possible future integration.
 
----
+## 12. Cross Platform Support
 
-## 11) Cross-Platform Support
+- Works on **Windows** using `run_backup.bat`
+- Works on **Linux** using `run_backup.sh`
+- No Python required
+- No installation required for the UI
 
-This project is built to be portable:
+## 13. Limitations
 
-- ✅ Works on **Linux**
-- ✅ Works on **Windows**
-- ✅ No OS-specific setup required for the dashboard
-- ✅ Relative paths help keep backups movable across environments
+- Browser-based apps cannot always open file explorer reliably.
+- Preview behavior may depend on local browser and file permissions.
+- Backup creation must be triggered externally through the provided scripts.
 
----
+## 14. Future Improvements
 
-## 12) Limitations
+- Connect **Create Backup Now** directly to backup scripts
+- Offer a desktop app version (Electron or Tauri)
+- Add automatic backup scheduling
+- Improve backup preview and navigation experience
 
-Current practical limitations:
+## 15. Conclusion
 
-- Browser cannot always open local folders/file explorer reliably.
-- Backup creation still requires manual script execution.
-- File/folder preview behavior depends on browser permissions and local security settings.
+This tool is a **simple, portable, and safe** way to manage local file backups.
 
----
-
-## 13) Future Improvements
-
-Planned enhancement ideas:
-
-- Auto backup trigger integration from the dashboard
-- Desktop app version (Electron or Tauri)
-- Real-time folder monitoring and scheduled checkpoints
-- Better built-in preview support for backed-up files
-
----
-
-## 14) Conclusion
-
-This tool is designed to be:
-
-- **Simple** to use
-- **Portable** across machines
-- **Safe** for local backup history
-- Friendly for **non-technical users**
-
-If you need checkpoint-style backups without Git complexity, this project gives you a clean and practical workflow.
+It is built for non-technical users who want clear checkpoint history without Git, setup complexity, or cloud dependency.
