@@ -426,7 +426,7 @@
     </div>
     <div>
       <div class="header-title">Local Checkpoints & Backup Activity</div>
-      <div class="header-sub">Simple local-first backup tracking and version recovery</div>
+      <div class="header-sub">Simple local-first backup tracking and portable version recovery</div>
     </div>
   </div>
 
@@ -486,16 +486,17 @@
       <div class="backup-controls">
         <label class="btn btn-secondary" for="csv-input">Load CSV Log</label>
         <input id="csv-input" type="file" accept=".csv,text/csv" style="display:none" />
-        <span id="csv-file-name" class="muted">No CSV selected</span>
+        <span id="csv-file-name" class="muted">No CSV selected (recommended: ./versionControl/sampleLog.csv)</span>
         <button id="btn-create-backup" class="btn btn-primary">Create Backup Now</button>
       </div>
 
+      <div class="muted" style="margin-bottom:.2rem;">Designed for log file path: <code style="font-family:var(--mono);">./versionControl/sampleLog.csv</code></div>
       <div class="muted" style="margin-bottom:.65rem;">Direct local folder opening may be blocked by your browser.</div>
 
       <div class="filters">
         <div class="field">
           <label for="filter-search">Search backups</label>
-          <input id="filter-search" class="input" placeholder="Search day, date, path, type" />
+          <input id="filter-search" class="input" placeholder="Search day, date, time, path, type" />
         </div>
         <div class="field">
           <label for="filter-type">Filter by type</label>
@@ -548,6 +549,7 @@
                 <tr>
                   <th>Day</th>
                   <th>Backup date</th>
+                  <th>Backup time</th>
                   <th>Folder path / link</th>
                   <th>No. of files</th>
                   <th>Type</th>
@@ -555,7 +557,7 @@
                 </tr>
               </thead>
               <tbody id="backup-table-body">
-                <tr><td colspan="6"><div class="empty">Load a backup log CSV file to view backup activity.</div></td></tr>
+                <tr><td colspan="7"><div class="empty">Load a backup log CSV file to view backup activity.</div></td></tr>
               </tbody>
             </table>
           </div>
@@ -752,28 +754,60 @@ function parseNumberValue(v) {
   return Number.isFinite(n) ? n : null;
 }
 
-function convertPathToFileUrl(path) {
+function normalizeBackupTime(rawTime) {
+  const raw = normalizeText(rawTime);
+  if (!raw) return '';
+
+  const m = raw.match(/^(\d{1,2})[:\-](\d{1,2})$/);
+  if (!m) return '';
+
+  const hh = Number(m[1]);
+  const mm = Number(m[2]);
+  if (!Number.isInteger(hh) || !Number.isInteger(mm) || hh < 0 || hh > 23 || mm < 0 || mm > 59) return '';
+
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+}
+
+function parseBackupTimeFromPath(path) {
   const p = normalizeText(path);
   if (!p) return '';
-  if (/^file:\/\//i.test(p)) return p;
+  const m = p.match(/(\d{4}-\d{2}-\d{2})_(\d{2})-(\d{2})/);
+  if (!m) return '';
+  const hh = Number(m[2]);
+  const mm = Number(m[3]);
+  if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return '';
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+}
 
-  const windowsDrive = p.match(/^([a-zA-Z]):[\\/](.*)$/);
-  if (windowsDrive) {
-    const drive = windowsDrive[1].toUpperCase();
-    const rest = windowsDrive[2].replace(/\\/g, '/');
-    return `file:///${drive}:/${encodeURI(rest)}`;
-  }
+function resolveBackupTime(rawTime, folderPath) {
+  const fromColumn = normalizeBackupTime(rawTime);
+  if (fromColumn) return fromColumn;
+  const fromPath = parseBackupTimeFromPath(folderPath);
+  return fromPath || '--';
+}
 
-  if (p.startsWith('\\\\')) {
-    const converted = p.replace(/\\/g, '/');
-    return `file:${encodeURI(converted)}`;
-  }
+function normalizeRelativePath(path) {
+  const raw = normalizeText(path).replace(/\\/g, '/');
+  if (!raw) return '';
+  const cleaned = raw.replace(/^\.\//, '').replace(/^\/+/, '').trim();
+  return cleaned ? `./${cleaned}` : '';
+}
 
-  if (p.startsWith('/')) {
-    return `file://${encodeURI(p)}`;
-  }
+function isPortableRelativePath(path) {
+  const p = normalizeText(path);
+  if (!p) return false;
+  if (/^[a-zA-Z]:[\\/]/.test(p)) return false;
+  if (/^\\\\/.test(p)) return false;
+  if (/^\//.test(p)) return false;
+  if (/^file:\/\//i.test(p)) return false;
+  return true;
+}
 
-  return '';
+function convertPathToFileUrl(path) {
+  const normalized = normalizeRelativePath(path);
+  if (!normalized || !isPortableRelativePath(normalized)) return '';
+  const base = new URL('.', window.location.href);
+  return new URL(normalized.replace(/^\.\//, ''), base).href;
 }
 
 async function copyToClipboard(text) {
@@ -867,7 +901,8 @@ elSaveBtn.addEventListener('click', async () => {
   elSaveBtn.innerHTML = '<span class="spinner"></span> Saving…';
 
   try {
-    const checkpointsRoot = await getOrCreateDir(rootDirHandle, '_checkpoints');
+    const versionControlDir = await getOrCreateDir(rootDirHandle, 'versionControl');
+    const checkpointsRoot = await getOrCreateDir(versionControlDir, '_checkpoints');
     const baseName = selectedFile.name.replace(/\.[^.]+$/, '');
     const fileSlot = await getOrCreateDir(checkpointsRoot, baseName);
 
@@ -898,7 +933,13 @@ async function refreshVersions() {
   const versions = [];
 
   try {
-    const checkpointsRoot = await rootDirHandle.getDirectoryHandle('_checkpoints');
+    let checkpointsRoot;
+    try {
+      const versionControlDir = await rootDirHandle.getDirectoryHandle('versionControl');
+      checkpointsRoot = await versionControlDir.getDirectoryHandle('_checkpoints');
+    } catch {
+      checkpointsRoot = await rootDirHandle.getDirectoryHandle('_checkpoints');
+    }
     const fileSlot = await checkpointsRoot.getDirectoryHandle(baseName);
     for await (const [name, handle] of fileSlot.entries()) {
       if (handle.kind === 'directory') versions.push({ folderName: name, dirHandle: handle });
@@ -1067,6 +1108,7 @@ function mapCSVToBackupRows(csvRows) {
 
   const idxDay = findHeaderIndex(headers, ['day']);
   const idxDate = findHeaderIndex(headers, ['backup date', 'date', 'backupdate']);
+  const idxTime = findHeaderIndex(headers, ['backup time', 'time', 'backup time ', 'backup_time', 'backuptime']);
   const idxPath = findHeaderIndex(headers, ['folder link', 'folder path', 'root folder', 'folder', 'path', 'backup folder']);
   const idxFiles = findHeaderIndex(headers, ['no of files', 'no files', 'no of file', 'no offile', 'no of files ', 'no of files.', 'no. of files', 'number of files', 'files']);
   const idxType = findHeaderIndex(headers, ['type', 'backup type']);
@@ -1087,7 +1129,9 @@ function mapCSVToBackupRows(csvRows) {
     const r = csvRows[i];
     const day = normalizeText(r[idxDay]);
     const backupDate = normalizeText(r[idxDate]);
-    const folderPath = normalizeText(r[idxPath]);
+    const backupTime = resolveBackupTime(idxTime >= 0 ? r[idxTime] : '', normalizeText(r[idxPath]));
+    const folderPathRaw = normalizeText(r[idxPath]);
+    const folderPath = normalizeRelativePath(folderPathRaw);
     const filesRaw = normalizeText(r[idxFiles]);
     const typeRaw = normalizeText(r[idxType]);
 
@@ -1099,8 +1143,10 @@ function mapCSVToBackupRows(csvRows) {
       id: `b_${i}_${Math.random().toString(36).slice(2, 7)}`,
       day: day || '—',
       backupDate: backupDate || '—',
+      backupTime,
       parsedDate,
       folderPath,
+      hasPortablePath: isPortableRelativePath(folderPath),
       noOfFilesRaw: filesRaw || '—',
       noOfFiles: parseNumberValue(filesRaw),
       type: normalizedType(typeRaw)
@@ -1108,7 +1154,22 @@ function mapCSVToBackupRows(csvRows) {
   }
 
   mapped.sort((a, b) => {
-    if (a.parsedDate && b.parsedDate) return b.parsedDate - a.parsedDate;
+    if (a.parsedDate && b.parsedDate) {
+      const aSortDate = new Date(a.parsedDate.getTime());
+      const bSortDate = new Date(b.parsedDate.getTime());
+      const aTime = normalizeBackupTime(a.backupTime);
+      const bTime = normalizeBackupTime(b.backupTime);
+
+      if (aTime) {
+        const [hh, mm] = aTime.split(':').map(Number);
+        aSortDate.setHours(hh, mm, 0, 0);
+      }
+      if (bTime) {
+        const [hh, mm] = bTime.split(':').map(Number);
+        bSortDate.setHours(hh, mm, 0, 0);
+      }
+      return bSortDate - aSortDate;
+    }
     if (a.parsedDate && !b.parsedDate) return -1;
     if (!a.parsedDate && b.parsedDate) return 1;
     return 0;
@@ -1177,7 +1238,7 @@ function applyBackupFilters() {
 
   filteredBackupRows = originalBackupRows.filter(row => {
     if (q) {
-      const hay = `${row.day} ${row.backupDate} ${row.folderPath} ${row.type}`.toLowerCase();
+      const hay = `${row.day} ${row.backupDate} ${row.backupTime} ${row.folderPath} ${row.type}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
 
@@ -1207,25 +1268,26 @@ function applyBackupFilters() {
 function renderBackupTable() {
   if (!originalBackupRows.length) {
     elResultsCount.textContent = 'Load a backup log CSV file to view backup activity.';
-    elBackupTableBody.innerHTML = '<tr><td colspan="6"><div class="empty">Load a backup log CSV file to view backup activity.</div></td></tr>';
+    elBackupTableBody.innerHTML = '<tr><td colspan="7"><div class="empty">Load a backup log CSV file to view backup activity.</div></td></tr>';
     return;
   }
 
   elResultsCount.textContent = `Showing ${filteredBackupRows.length} of ${originalBackupRows.length} backups`;
 
   if (!filteredBackupRows.length) {
-    elBackupTableBody.innerHTML = '<tr><td colspan="6"><div class="empty">No backups match the current filters.</div></td></tr>';
+    elBackupTableBody.innerHTML = '<tr><td colspan="7"><div class="empty">No backups match the current filters.</div></td></tr>';
     return;
   }
 
   const selectedId = selectedBackupRow ? selectedBackupRow.id : '';
 
   elBackupTableBody.innerHTML = filteredBackupRows.map(row => {
-    const fileLink = convertPathToFileUrl(row.folderPath);
+    const fileLink = row.hasPortablePath ? convertPathToFileUrl(row.folderPath) : '';
     return `
       <tr data-id="${row.id}" class="${selectedId === row.id ? 'selected' : ''}">
         <td>${escapeHtml(row.day)}</td>
         <td>${escapeHtml(row.backupDate)}</td>
+        <td>${escapeHtml(row.backupTime || '--')}</td>
         <td class="cell-path" title="${escapeHtml(row.folderPath || '')}">${escapeHtml(row.folderPath || '—')}</td>
         <td>${escapeHtml(row.noOfFilesRaw)}</td>
         <td>${escapeHtml(row.type)}</td>
@@ -1284,15 +1346,16 @@ function renderBackupTable() {
 }
 
 function attemptOpenPath(rawPath) {
-  const fileUrl = convertPathToFileUrl(rawPath);
+  const normalized = normalizeRelativePath(rawPath);
+  const fileUrl = convertPathToFileUrl(normalized);
   if (!fileUrl) {
-    toast('Cannot create a local link for this path. Copy the path and open it in your file explorer.', 'warn');
+    toast('This path is not a portable relative path. Copy the path and open it in your file explorer.', 'warn');
     return;
   }
 
   try {
     window.open(fileUrl, '_blank', 'noopener');
-    toast('Attempted to open folder link. Direct opening may be blocked by your browser.', 'warn');
+    toast('Attempted to open folder link. Direct local folder opening may be blocked by your browser.', 'warn');
   } catch {
     toast('Browser blocked opening this local path. Please copy the path and open it manually.', 'warn');
   }
@@ -1305,7 +1368,7 @@ async function handleCreateBackupNow() {
     return;
   }
 
-  toast('Backup trigger is not connected in this browser-only version. Please run the backup script from your system or desktop launcher.', 'warn');
+  toast('Backup trigger is not connected in this browser-only version. Please run the backup process from your system or company launcher.', 'warn');
 }
 
 elCreateBackupBtn.addEventListener('click', handleCreateBackupNow);
@@ -1329,7 +1392,7 @@ async function showBackupPreviewForRow(row) {
   const pathText = row.folderPath || '—';
 
   elPreviewContent.innerHTML = `
-    <div class="preview-meta"><strong>Selected backup:</strong> ${escapeHtml(row.day)} • ${escapeHtml(row.backupDate)}<br><strong>Folder/path:</strong> ${escapeHtml(pathText)}</div>
+    <div class="preview-meta"><strong>Selected backup:</strong> ${escapeHtml(row.day)}<br><strong>Backup date:</strong> ${escapeHtml(row.backupDate)}<br><strong>Backup time:</strong> ${escapeHtml(row.backupTime || '--')}<br><strong>Folder/path:</strong> ${escapeHtml(pathText)}</div>
     <div class="breadcrumb" id="preview-breadcrumb">${escapeHtml(pathText || '—')}</div>
     <div class="preview-toolbar">
       <button class="btn btn-secondary btn-sm" id="preview-open-folder">Open Folder</button>
@@ -1378,7 +1441,7 @@ async function showBackupPreviewForRow(row) {
     await renderHandleItems(selectedFolderHandle, selectedFolderHandle.name, []);
   } else {
     const list = document.getElementById('preview-list');
-    list.innerHTML = '<div class="empty" style="padding:1rem;">Preview not available until this folder is selected through the browser.</div>';
+    list.innerHTML = '<div class="empty" style="padding:1rem;">This backup path can be viewed here after the folder is selected through the browser.</div>';
   }
 }
 
@@ -1502,7 +1565,25 @@ elBtnClearFilters.addEventListener('click', () => {
   applyBackupFilters();
 });
 
+async function tryLoadDefaultBackupLog() {
+  try {
+    const response = await fetch('./versionControl/sampleLog.csv');
+    if (!response.ok) return;
+    const text = await response.text();
+    const csvRows = parseCSV(text);
+    const mapped = mapCSVToBackupRows(csvRows);
+    originalBackupRows = mapped;
+    filteredBackupRows = mapped.slice();
+    elCsvFileName.textContent = './versionControl/sampleLog.csv';
+    applyBackupFilters();
+    renderSummary();
+    renderPreviewEmpty('Select a backup entry to preview its contents.');
+    toast(`Loaded ${mapped.length} backup entr${mapped.length === 1 ? 'y' : 'ies'} from default log.`, 'ok');
+  } catch {}
+}
+
 renderBackupTable();
+tryLoadDefaultBackupLog();
 </script>
 </body>
 </html>
