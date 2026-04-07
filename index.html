@@ -3,30 +3,25 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>File Checkpoint Tool</title>
+<title>File Checkpoint & Backup Activity</title>
 <style>
-  /* ─── Google Fonts ───────────────────────────────────────────────────── */
-  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;600;700&display=swap');
-
-  /* ─── CSS Variables ──────────────────────────────────────────────────── */
   :root {
-    --bg:        #0f1117;
-    --surface:   #181c27;
-    --surface2:  #1f2436;
-    --border:    #2a3050;
-    --accent:    #4f8ef7;
-    --accent2:   #38d9a9;
-    --warn:      #f7a94f;
-    --danger:    #f76f6f;
-    --text:      #e8ecf5;
-    --muted:     #7a849e;
-    --radius:    10px;
-    --font:      'Sora', sans-serif;
-    --mono:      'DM Mono', monospace;
-    --shadow:    0 4px 24px rgba(0,0,0,.45);
+    --bg: #0f1117;
+    --surface: #181c27;
+    --surface2: #1f2436;
+    --border: #2a3050;
+    --accent: #4f8ef7;
+    --accent2: #38d9a9;
+    --warn: #f7a94f;
+    --danger: #f76f6f;
+    --text: #e8ecf5;
+    --muted: #7a849e;
+    --radius: 10px;
+    --shadow: 0 4px 24px rgba(0,0,0,.45);
+    --font: Inter, Segoe UI, Roboto, Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   }
 
-  /* ─── Reset ──────────────────────────────────────────────────────────── */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html { font-size: 15px; }
   body {
@@ -40,16 +35,14 @@
     padding: 2rem 1rem 4rem;
   }
 
-  /* ─── App Shell ──────────────────────────────────────────────────────── */
   .app {
     width: 100%;
-    max-width: 780px;
+    max-width: 1180px;
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
+    gap: 1rem;
   }
 
-  /* ─── Header ─────────────────────────────────────────────────────────── */
   .header {
     display: flex;
     align-items: center;
@@ -66,10 +59,34 @@
     box-shadow: 0 0 18px rgba(79,142,247,.3);
   }
   .header-icon svg { width: 20px; height: 20px; fill: #fff; }
-  .header-title { font-size: 1.25rem; font-weight: 700; letter-spacing: -.02em; }
-  .header-sub   { font-size: .72rem; color: var(--muted); margin-top: 1px; }
+  .header-title { font-size: 1.22rem; font-weight: 700; letter-spacing: -.02em; }
+  .header-sub { font-size: .78rem; color: var(--muted); margin-top: 2px; }
 
-  /* ─── Card ───────────────────────────────────────────────────────────── */
+  .tabs {
+    display: flex;
+    gap: .5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: .5rem;
+  }
+  .tab-btn {
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    border-radius: 8px;
+    padding: .55rem .95rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .tab-btn.active {
+    background: linear-gradient(135deg, var(--accent), #3577e0);
+    border-color: transparent;
+  }
+
+  .tab-panel { display: none; gap: 1rem; }
+  .tab-panel.active { display: grid; }
+
   .card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -78,21 +95,20 @@
     box-shadow: var(--shadow);
   }
   .card-label {
-    font-size: .65rem;
-    font-weight: 600;
+    font-size: .68rem;
+    font-weight: 700;
     letter-spacing: .1em;
     text-transform: uppercase;
     color: var(--muted);
     margin-bottom: .7rem;
   }
 
-  /* ─── Workspace Row ──────────────────────────────────────────────────── */
   .ws-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: .85rem;
   }
-  @media (max-width: 540px) { .ws-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 720px) { .ws-grid { grid-template-columns: 1fr; } }
 
   .ws-box {
     background: var(--surface2);
@@ -124,38 +140,38 @@
     text-overflow: ellipsis;
   }
   .ws-box-value.placeholder { color: var(--muted); font-style: italic; }
-  .ws-box-action {
-    font-size: .72rem;
-    color: var(--accent);
-    font-weight: 600;
-  }
+  .ws-box-action { font-size: .72rem; color: var(--accent); font-weight: 600; }
 
-  /* ─── Save Row ───────────────────────────────────────────────────────── */
-  .save-row {
-    display: flex;
-    gap: .75rem;
-    align-items: center;
-  }
-  .save-row input {
-    flex: 1;
+  .save-row { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; }
+  .save-row input,
+  .input,
+  .select,
+  input[type="date"] {
     background: var(--surface2);
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: .6rem .9rem;
+    padding: .55rem .75rem;
     color: var(--text);
     font-family: var(--font);
-    font-size: .88rem;
+    font-size: .86rem;
     outline: none;
     transition: border-color .18s;
   }
-  .save-row input::placeholder { color: var(--muted); }
-  .save-row input:focus { border-color: var(--accent); }
+  .save-row input { flex: 1; min-width: 260px; }
+  .save-row input:focus,
+  .input:focus,
+  .select:focus,
+  input[type="date"]:focus { border-color: var(--accent); }
 
-  /* ─── Buttons ────────────────────────────────────────────────────────── */
   .btn {
-    display: inline-flex; align-items: center; gap: .4rem;
-    border: none; cursor: pointer; font-family: var(--font);
-    font-weight: 600; border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    border: none;
+    cursor: pointer;
+    font-family: var(--font);
+    font-weight: 600;
+    border-radius: 8px;
     transition: opacity .15s, transform .1s, box-shadow .15s;
     white-space: nowrap;
   }
@@ -163,269 +179,503 @@
   .btn-primary {
     background: linear-gradient(135deg, var(--accent), #3577e0);
     color: #fff;
-    padding: .6rem 1.2rem;
-    font-size: .88rem;
+    padding: .6rem 1.1rem;
+    font-size: .86rem;
     box-shadow: 0 2px 12px rgba(79,142,247,.35);
   }
-  .btn-primary:hover { box-shadow: 0 4px 18px rgba(79,142,247,.55); }
-  .btn-sm {
-    padding: .3rem .7rem;
-    font-size: .75rem;
-    border-radius: 6px;
-    font-weight: 600;
+  .btn-secondary {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: .55rem .9rem;
+    font-size: .84rem;
   }
-  .btn-open   { background: var(--surface2); color: var(--accent2); border: 1px solid var(--border); }
-  .btn-open:hover   { border-color: var(--accent2); }
-  .btn-restore{ background: var(--surface2); color: var(--warn);   border: 1px solid var(--border); }
-  .btn-restore:hover{ border-color: var(--warn); }
-  .btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+  .btn-secondary:hover { border-color: var(--accent); }
+  .btn-warning { color: var(--warn); border-color: var(--warn); }
+  .btn-sm { padding: .28rem .62rem; font-size: .72rem; border-radius: 6px; }
+  .btn-open { background: var(--surface2); color: var(--accent2); border: 1px solid var(--border); }
+  .btn-open:hover { border-color: var(--accent2); }
+  .btn-restore { background: var(--surface2); color: var(--warn); border: 1px solid var(--border); }
+  .btn-restore:hover { border-color: var(--warn); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
 
-  /* ─── Toast ──────────────────────────────────────────────────────────── */
-  #toast {
-    position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
-    background: var(--surface2); border: 1px solid var(--border);
-    color: var(--text); font-size: .83rem; padding: .6rem 1.2rem;
-    border-radius: 999px; box-shadow: var(--shadow);
-    opacity: 0; pointer-events: none;
-    transition: opacity .25s;
-    z-index: 999;
-    max-width: 90vw; text-align: center;
-  }
-  #toast.show { opacity: 1; }
-  #toast.ok   { border-color: var(--accent2); color: var(--accent2); }
-  #toast.err  { border-color: var(--danger);  color: var(--danger);  }
-  #toast.warn { border-color: var(--warn);    color: var(--warn);    }
-
-  /* ─── Version List ───────────────────────────────────────────────────── */
-  .versions-header {
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  .versions-count {
-    font-family: var(--mono);
-    font-size: .72rem;
-    color: var(--muted);
-  }
+  .versions-header { display: flex; align-items: center; justify-content: space-between; }
+  .versions-count { font-family: var(--mono); font-size: .72rem; color: var(--muted); }
   .versions-scroll {
     max-height: 420px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
     gap: .55rem;
-    padding-right: .25rem;
+    padding-right: .2rem;
     margin-top: .75rem;
   }
-  .versions-scroll::-webkit-scrollbar { width: 5px; }
-  .versions-scroll::-webkit-scrollbar-track { background: transparent; }
-  .versions-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
-
-  /* ─── Version Row ────────────────────────────────────────────────────── */
   .v-row {
     background: var(--surface2);
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: .65rem 1rem;
+    padding: .65rem .85rem;
     display: flex;
     align-items: center;
     gap: .75rem;
-    animation: fadeIn .2s ease;
   }
-  @keyframes fadeIn { from { opacity:0; transform: translateY(4px); } to { opacity:1; transform:none; } }
+  .v-row.selected { border-color: var(--accent); }
   .v-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--accent); flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
     box-shadow: 0 0 6px var(--accent);
   }
   .v-meta { flex: 1; min-width: 0; }
-  .v-ts {
-    font-family: var(--mono);
-    font-size: .75rem;
-    color: var(--muted);
+  .v-ts { font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+  .v-note { font-size: .82rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .v-file { font-family: var(--mono); font-size: .68rem; color: var(--muted); }
+  .v-actions { display: flex; gap: .4rem; flex-shrink: 0; }
+
+  .backup-controls {
+    display: flex;
+    gap: .7rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: .75rem;
   }
-  .v-note {
-    font-size: .82rem;
-    font-weight: 600;
-    color: var(--text);
+  .muted { color: var(--muted); font-size: .8rem; }
+
+  .filters {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr 1fr 1fr 1fr auto;
+    gap: .55rem;
+    align-items: end;
+  }
+  @media (max-width: 1020px) {
+    .filters { grid-template-columns: 1fr 1fr; }
+  }
+  .field { display: flex; flex-direction: column; gap: .3rem; }
+  .field label { font-size: .73rem; color: var(--muted); }
+
+  .summary-cards {
+    margin-top: .75rem;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(140px, 1fr));
+    gap: .55rem;
+  }
+  @media (max-width: 760px) {
+    .summary-cards { grid-template-columns: repeat(2, minmax(140px, 1fr)); }
+  }
+  .summary-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: .55rem .65rem;
+  }
+  .summary-card .k { font-size: .7rem; color: var(--muted); }
+  .summary-card .v { margin-top: .2rem; font-size: 1.05rem; font-weight: 700; }
+
+  .backup-main {
+    display: grid;
+    grid-template-columns: 1.8fr 1fr;
+    gap: .85rem;
+  }
+  @media (max-width: 960px) {
+    .backup-main { grid-template-columns: 1fr; }
+  }
+
+  .table-wrap {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: auto;
+    background: var(--surface2);
+    min-height: 260px;
+    max-height: 520px;
+  }
+  table { width: 100%; border-collapse: collapse; min-width: 780px; }
+  th, td {
+    border-bottom: 1px solid var(--border);
+    padding: .55rem .6rem;
+    text-align: left;
+    vertical-align: top;
+    font-size: .8rem;
+  }
+  th {
+    color: var(--muted);
+    position: sticky;
+    top: 0;
+    background: #20273b;
+    z-index: 1;
+    font-weight: 700;
+  }
+  tbody tr { cursor: pointer; }
+  tbody tr:hover { background: #232a41; }
+  tbody tr.selected { background: #24304d; }
+
+  .cell-path {
+    font-family: var(--mono);
+    max-width: 240px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .v-file {
+
+  .preview-card {
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    border-radius: 8px;
+    min-height: 260px;
+    padding: .8rem;
+    display: flex;
+    flex-direction: column;
+    gap: .6rem;
+  }
+  .preview-title { font-size: .9rem; font-weight: 700; }
+  .preview-meta { font-size: .78rem; color: var(--muted); line-height: 1.45; word-break: break-word; }
+  .preview-toolbar { display: flex; gap: .45rem; flex-wrap: wrap; }
+  .breadcrumb {
     font-family: var(--mono);
-    font-size: .68rem;
+    font-size: .72rem;
     color: var(--muted);
+    background: #1a2032;
+    border: 1px dashed var(--border);
+    border-radius: 6px;
+    padding: .38rem .5rem;
+    word-break: break-all;
   }
-  .v-actions { display: flex; gap: .4rem; flex-shrink: 0; }
+  .preview-list {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: auto;
+    max-height: 300px;
+    background: #1a2032;
+  }
+  .preview-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    gap: .4rem;
+    align-items: center;
+    padding: .43rem .5rem;
+    border-bottom: 1px solid rgba(42,48,80,.55);
+    font-size: .77rem;
+  }
+  .preview-item:last-child { border-bottom: 0; }
 
-  /* ─── Empty State ────────────────────────────────────────────────────── */
   .empty {
-    text-align: center; padding: 2.5rem 1rem;
-    color: var(--muted); font-size: .85rem;
-    display: flex; flex-direction: column; align-items: center; gap: .5rem;
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--muted);
+    font-size: .85rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .45rem;
   }
-  .empty-icon { font-size: 2rem; opacity: .35; }
+  .empty-icon { font-size: 1.6rem; opacity: .35; }
 
-  /* ─── Spinner ─────────────────────────────────────────────────────────── */
+  #toast {
+    position: fixed;
+    bottom: 1.4rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: .83rem;
+    padding: .6rem 1rem;
+    border-radius: 999px;
+    box-shadow: var(--shadow);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s;
+    z-index: 999;
+    max-width: 92vw;
+    text-align: center;
+  }
+  #toast.show { opacity: 1; }
+  #toast.ok { border-color: var(--accent2); color: var(--accent2); }
+  #toast.err { border-color: var(--danger); color: var(--danger); }
+  #toast.warn { border-color: var(--warn); color: var(--warn); }
+
+  #unsupported {
+    display: none;
+    background: #2a1a1a;
+    border: 1px solid var(--danger);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    color: #f9a8a8;
+    font-size: .85rem;
+    line-height: 1.5;
+  }
+
   .spinner {
     display: inline-block;
-    width: 14px; height: 14px;
-    border: 2px solid rgba(255,255,255,.2);
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255,255,255,.25);
     border-top-color: #fff;
     border-radius: 50%;
     animation: spin .6s linear infinite;
-    vertical-align: middle;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* ─── Unsupported Banner ─────────────────────────────────────────────── */
-  #unsupported {
-    display: none;
-    background: #2a1a1a; border: 1px solid var(--danger);
-    border-radius: var(--radius); padding: 1rem 1.25rem;
-    color: #f9a8a8; font-size: .85rem; line-height: 1.6;
-  }
 </style>
 </head>
 <body>
-
 <div class="app">
-
-  <!-- ── Header ──────────────────────────────────────────────────────── -->
   <div class="header">
     <div class="header-icon">
       <svg viewBox="0 0 24 24"><path d="M20 6h-3V4a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2zm-9-2h2v2h-2V4zm-6 4h14v2H5V8zm0 10v-6h14v6H5z"/></svg>
     </div>
     <div>
-      <div class="header-title">File Checkpoint Tool</div>
-      <div class="header-sub">Save · View · Restore — no Git, no cloud, just your files</div>
+      <div class="header-title">Local Checkpoints & Backup Activity</div>
+      <div class="header-sub">Simple local-first backup tracking and version recovery</div>
     </div>
   </div>
 
-  <!-- ── Unsupported ─────────────────────────────────────────────────── -->
-  <div id="unsupported">
-    ⚠️ Your browser does not support the <strong>File System Access API</strong>.<br>
-    Please use <strong>Google Chrome</strong> or <strong>Microsoft Edge</strong> (version 86+) to run this tool.
+  <div id="unsupported">⚠️ Your browser does not support full folder access features. Please use Google Chrome or Microsoft Edge for the best experience.</div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="checkpoints">Checkpoints</button>
+    <button class="tab-btn" data-tab="backup-log">Backup Log</button>
   </div>
 
-  <!-- ── Workspace ───────────────────────────────────────────────────── -->
-  <div class="card">
-    <div class="card-label">Workspace</div>
-    <div class="ws-grid">
-      <div class="ws-box" id="btn-folder" title="Click to select a workspace folder">
-        <div class="ws-box-title">📁 Folder</div>
-        <div class="ws-box-value placeholder" id="folder-name">No folder selected</div>
-        <div class="ws-box-action">Click to select →</div>
-      </div>
-      <div class="ws-box" id="btn-file" title="Click to select a file (.xlsx or .csv)">
-        <div class="ws-box-title">📄 File</div>
-        <div class="ws-box-value placeholder" id="file-name">No file selected</div>
-        <div class="ws-box-action">Click to select →</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Save Version ────────────────────────────────────────────────── -->
-  <div class="card">
-    <div class="card-label">Save a Version</div>
-    <div class="save-row">
-      <input type="text" id="note-input" placeholder="Add a note — e.g. before GST update (optional)" maxlength="60" />
-      <button class="btn btn-primary" id="btn-save">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12l5 5L19 7"/></svg>
-        Save Version
-      </button>
-    </div>
-  </div>
-
-  <!-- ── Version History ─────────────────────────────────────────────── -->
-  <div class="card">
-    <div class="versions-header">
-      <div class="card-label" style="margin-bottom:0">Version History</div>
-      <span class="versions-count" id="versions-count"></span>
-    </div>
-    <div class="versions-scroll" id="versions-list">
-      <div class="empty">
-        <div class="empty-icon">🗂️</div>
-        Select a folder and file, then save your first version.
+  <section id="panel-checkpoints" class="tab-panel active">
+    <div class="card">
+      <div class="card-label">Workspace</div>
+      <div class="ws-grid">
+        <div class="ws-box" id="btn-folder" title="Click to select a workspace folder">
+          <div class="ws-box-title">📁 Folder</div>
+          <div class="ws-box-value placeholder" id="folder-name">No folder selected</div>
+          <div class="ws-box-action">Click to select →</div>
+        </div>
+        <div class="ws-box" id="btn-file" title="Click to select a file (.xlsx or .csv)">
+          <div class="ws-box-title">📄 File</div>
+          <div class="ws-box-value placeholder" id="file-name">No file selected</div>
+          <div class="ws-box-action">Click to select →</div>
+        </div>
       </div>
     </div>
-  </div>
 
+    <div class="card">
+      <div class="card-label">Save a Version</div>
+      <div class="save-row">
+        <input type="text" id="note-input" placeholder="Add a note (optional)" maxlength="60" />
+        <button class="btn btn-primary" id="btn-save">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12l5 5L19 7"/></svg>
+          Save Version
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="versions-header">
+        <div class="card-label" style="margin-bottom:0">Version History</div>
+        <span class="versions-count" id="versions-count"></span>
+      </div>
+      <div class="versions-scroll" id="versions-list">
+        <div class="empty">
+          <div class="empty-icon">🗂️</div>
+          Select a folder and file, then save your first version.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="panel-backup-log" class="tab-panel">
+    <div class="card">
+      <div class="card-label">Backup Activity</div>
+
+      <div class="backup-controls">
+        <label class="btn btn-secondary" for="csv-input">Load CSV Log</label>
+        <input id="csv-input" type="file" accept=".csv,text/csv" style="display:none" />
+        <span id="csv-file-name" class="muted">No CSV selected</span>
+        <button id="btn-create-backup" class="btn btn-primary">Create Backup Now</button>
+      </div>
+
+      <div class="muted" style="margin-bottom:.65rem;">Direct local folder opening may be blocked by your browser.</div>
+
+      <div class="filters">
+        <div class="field">
+          <label for="filter-search">Search backups</label>
+          <input id="filter-search" class="input" placeholder="Search day, date, path, type" />
+        </div>
+        <div class="field">
+          <label for="filter-type">Filter by type</label>
+          <select id="filter-type" class="select">
+            <option value="all">All</option>
+            <option value="full backup">Full backup</option>
+            <option value="incremental backup">Incremental backup</option>
+            <option value="no backup required">No backup required</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="filter-from">From date</label>
+          <input type="date" id="filter-from" />
+        </div>
+        <div class="field">
+          <label for="filter-to">To date</label>
+          <input type="date" id="filter-to" />
+        </div>
+        <div class="field">
+          <label for="filter-file-count">File count</label>
+          <select id="filter-file-count" class="select">
+            <option value="all">All</option>
+            <option value="zero">Zero files</option>
+            <option value="1-10">1 to 10</option>
+            <option value="11+">11+</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="filter-path-presence">Path</label>
+          <select id="filter-path-presence" class="select">
+            <option value="all">All</option>
+            <option value="has">Has folder path</option>
+            <option value="missing">Missing folder path</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="backup-controls" style="margin:.55rem 0 .35rem;">
+        <button id="btn-clear-filters" class="btn btn-secondary">Clear Filters</button>
+        <span id="results-count" class="muted">Load a backup log CSV file to view backup activity.</span>
+      </div>
+
+      <div class="summary-cards" id="summary-cards"></div>
+
+      <div class="backup-main" style="margin-top:.75rem;">
+        <div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Day</th>
+                  <th>Backup date</th>
+                  <th>Folder path / link</th>
+                  <th>No. of files</th>
+                  <th>Type</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="backup-table-body">
+                <tr><td colspan="6"><div class="empty">Load a backup log CSV file to view backup activity.</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="preview-card">
+          <div class="preview-title">Backup Preview</div>
+          <div id="preview-content" class="empty" style="padding:1rem .4rem;">
+            <div class="empty-icon">📂</div>
+            Select a backup entry to preview its contents.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 </div>
 
-<!-- ── Toast ─────────────────────────────────────────────────────────── -->
 <div id="toast"></div>
 
 <script>
-/* ═══════════════════════════════════════════════════════════════════════
-   FILE CHECKPOINT TOOL  –  Vanilla JS, File System Access API
-   ═══════════════════════════════════════════════════════════════════════ */
+/* ──────────────────────────────────────────────────────────────────────────
+   State
+   ────────────────────────────────────────────────────────────────────────── */
+let rootDirHandle = null;
+let selectedFile = null;
+let checkpointVersions = [];
+let selectedCheckpointPreview = null;
 
-// ── State ──────────────────────────────────────────────────────────────
-let rootDirHandle  = null;   // user-selected workspace folder
-let selectedFile   = null;   // { handle, name, ext }
+let originalBackupRows = [];
+let filteredBackupRows = [];
+let selectedBackupRow = null;
+let selectedFolderHandle = null;
+let currentPreviewHandle = null;
+let currentPreviewPath = '';
+const csvPathHandleMap = new Map();
 
-// ── DOM refs ───────────────────────────────────────────────────────────
-const elFolderBtn    = document.getElementById('btn-folder');
-const elFileBtn      = document.getElementById('btn-file');
-const elFolderName   = document.getElementById('folder-name');
-const elFileName     = document.getElementById('file-name');
-const elNoteInput    = document.getElementById('note-input');
-const elSaveBtn      = document.getElementById('btn-save');
+const BACKUP_LAUNCHER_URL = '';
+
+/* ──────────────────────────────────────────────────────────────────────────
+   DOM refs
+   ────────────────────────────────────────────────────────────────────────── */
+const elToast = document.getElementById('toast');
+const elUnsupported = document.getElementById('unsupported');
+
+const tabButtons = Array.from(document.querySelectorAll('.tab-btn'));
+const tabPanels = {
+  checkpoints: document.getElementById('panel-checkpoints'),
+  'backup-log': document.getElementById('panel-backup-log')
+};
+
+const elFolderBtn = document.getElementById('btn-folder');
+const elFileBtn = document.getElementById('btn-file');
+const elFolderName = document.getElementById('folder-name');
+const elFileName = document.getElementById('file-name');
+const elNoteInput = document.getElementById('note-input');
+const elSaveBtn = document.getElementById('btn-save');
 const elVersionsList = document.getElementById('versions-list');
-const elVersionsCount= document.getElementById('versions-count');
-const elToast        = document.getElementById('toast');
-const elUnsupported  = document.getElementById('unsupported');
+const elVersionsCount = document.getElementById('versions-count');
 
-// ── API Support check ──────────────────────────────────────────────────
+const elCsvInput = document.getElementById('csv-input');
+const elCsvFileName = document.getElementById('csv-file-name');
+const elCreateBackupBtn = document.getElementById('btn-create-backup');
+const elFilterSearch = document.getElementById('filter-search');
+const elFilterType = document.getElementById('filter-type');
+const elFilterFrom = document.getElementById('filter-from');
+const elFilterTo = document.getElementById('filter-to');
+const elFilterFileCount = document.getElementById('filter-file-count');
+const elFilterPathPresence = document.getElementById('filter-path-presence');
+const elBtnClearFilters = document.getElementById('btn-clear-filters');
+const elResultsCount = document.getElementById('results-count');
+const elSummaryCards = document.getElementById('summary-cards');
+const elBackupTableBody = document.getElementById('backup-table-body');
+const elPreviewContent = document.getElementById('preview-content');
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Startup checks
+   ────────────────────────────────────────────────────────────────────────── */
 if (!('showDirectoryPicker' in window)) {
   elUnsupported.style.display = 'block';
   elSaveBtn.disabled = true;
 }
 
-// ─────────────────────────────────────────────────────────────────────
-// UTILITY: Toast notification
-// ─────────────────────────────────────────────────────────────────────
-let _toastTimer = null;
+/* ──────────────────────────────────────────────────────────────────────────
+   Common utility functions
+   ────────────────────────────────────────────────────────────────────────── */
+let toastTimer = null;
 function toast(msg, type = 'ok') {
   elToast.textContent = msg;
   elToast.className = `show ${type}`;
-  clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => { elToast.className = ''; }, 3200);
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { elToast.className = ''; }, 3400);
 }
 
-// ─────────────────────────────────────────────────────────────────────
-// UTILITY: Timestamp  →  "2026-04-06_18-30"
-// ─────────────────────────────────────────────────────────────────────
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 function makeTimestamp() {
   const d = new Date();
-  const pad = n => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}`;
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}-${p(d.getMinutes())}`;
 }
 
-// ─────────────────────────────────────────────────────────────────────
-// UTILITY: Sanitise a string for use as a folder name
-// ─────────────────────────────────────────────────────────────────────
 function safeName(str) {
   return str.replace(/[^a-zA-Z0-9_\-]/g, '-').substring(0, 40);
 }
 
-// ─────────────────────────────────────────────────────────────────────
-// UTILITY: Get-or-create a directory handle inside a parent
-// ─────────────────────────────────────────────────────────────────────
 async function getOrCreateDir(parentHandle, name) {
   return parentHandle.getDirectoryHandle(name, { create: true });
 }
 
-// ─────────────────────────────────────────────────────────────────────
-// UTILITY: Read a FileSystemFileHandle as ArrayBuffer
-// ─────────────────────────────────────────────────────────────────────
 async function readFileHandle(handle) {
   const file = await handle.getFile();
   return file.arrayBuffer();
 }
 
-// ─────────────────────────────────────────────────────────────────────
-// UTILITY: Write ArrayBuffer to a new file inside a directory
-// ─────────────────────────────────────────────────────────────────────
 async function writeFile(dirHandle, filename, buffer) {
   const fh = await dirHandle.getFileHandle(filename, { create: true });
   const writable = await fh.createWritable();
@@ -433,51 +683,145 @@ async function writeFile(dirHandle, filename, buffer) {
   await writable.close();
 }
 
-// ─────────────────────────────────────────────────────────────────────
-// UTILITY: Trigger a browser download from ArrayBuffer
-// ─────────────────────────────────────────────────────────────────────
 function downloadBuffer(buffer, filename) {
   const blob = new Blob([buffer]);
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url; a.download = filename;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
 }
 
-// ─────────────────────────────────────────────────────────────────────
-// UTILITY: Pretty-print a checkpoint folder name
-//   "2026-04-06_18-30_before-gst"  →  { ts: "2026-04-06 18:30", note: "before-gst" }
-// ─────────────────────────────────────────────────────────────────────
 function parseCheckpointName(folderName) {
-  // Format: YYYY-MM-DD_HH-MM_note   or   YYYY-MM-DD_HH-MM_auto
   const m = folderName.match(/^(\d{4}-\d{2}-\d{2})_(\d{2}-\d{2})(?:_(.+))?$/);
   if (!m) return { ts: folderName, note: '' };
-  const ts   = `${m[1]}  ${m[2].replace('-', ':')}`;
+  const ts = `${m[1]}  ${m[2].replace('-', ':')}`;
   const note = m[3] ? m[3].replace(/-/g, ' ') : 'auto';
   return { ts, note };
 }
 
-// ─────────────────────────────────────────────────────────────────────
-// SELECT WORKSPACE FOLDER
-// ─────────────────────────────────────────────────────────────────────
+function normalizeText(v) {
+  return String(v || '').trim();
+}
+
+function normalizedType(rawType) {
+  const t = normalizeText(rawType).toLowerCase();
+  if (t.includes('full')) return 'Full backup';
+  if (t.includes('increment')) return 'Incremental backup';
+  if (t.includes('no') && t.includes('backup')) return 'No backup required';
+  return normalizeText(rawType) || '—';
+}
+
+function parseFlexibleDate(text) {
+  const raw = normalizeText(text);
+  if (!raw) return null;
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    const d = new Date(raw + 'T00:00:00');
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
+  const slash = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (slash) {
+    const a = Number(slash[1]);
+    const b = Number(slash[2]);
+    let y = Number(slash[3]);
+    if (y < 100) y += 2000;
+    const mmFirst = new Date(y, a - 1, b);
+    if (!Number.isNaN(mmFirst.getTime()) && mmFirst.getMonth() === a - 1 && mmFirst.getDate() === b) return mmFirst;
+    const ddFirst = new Date(y, b - 1, a);
+    if (!Number.isNaN(ddFirst.getTime()) && ddFirst.getMonth() === b - 1 && ddFirst.getDate() === a) return ddFirst;
+  }
+
+  const d = new Date(raw);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function toISODate(date) {
+  const p = n => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}`;
+}
+
+function parseNumberValue(v) {
+  const raw = normalizeText(v);
+  if (!raw) return null;
+  const cleaned = raw.replace(/,/g, '');
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : null;
+}
+
+function convertPathToFileUrl(path) {
+  const p = normalizeText(path);
+  if (!p) return '';
+  if (/^file:\/\//i.test(p)) return p;
+
+  const windowsDrive = p.match(/^([a-zA-Z]):[\\/](.*)$/);
+  if (windowsDrive) {
+    const drive = windowsDrive[1].toUpperCase();
+    const rest = windowsDrive[2].replace(/\\/g, '/');
+    return `file:///${drive}:/${encodeURI(rest)}`;
+  }
+
+  if (p.startsWith('\\\\')) {
+    const converted = p.replace(/\\/g, '/');
+    return `file:${encodeURI(converted)}`;
+  }
+
+  if (p.startsWith('/')) {
+    return `file://${encodeURI(p)}`;
+  }
+
+  return '';
+}
+
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast('Path copied.', 'ok');
+  } catch {
+    const temp = document.createElement('textarea');
+    temp.value = text;
+    document.body.appendChild(temp);
+    temp.select();
+    try {
+      document.execCommand('copy');
+      toast('Path copied.', 'ok');
+    } catch {
+      toast('Could not copy path in this browser.', 'warn');
+    }
+    temp.remove();
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Tabs
+   ────────────────────────────────────────────────────────────────────────── */
+function setActiveTab(tabKey) {
+  tabButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tabKey));
+  Object.entries(tabPanels).forEach(([key, panel]) => panel.classList.toggle('active', key === tabKey));
+}
+
+tabButtons.forEach(btn => {
+  btn.addEventListener('click', () => setActiveTab(btn.dataset.tab));
+});
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Checkpoint mode (existing behavior retained)
+   ────────────────────────────────────────────────────────────────────────── */
 elFolderBtn.addEventListener('click', async () => {
   try {
     rootDirHandle = await showDirectoryPicker({ mode: 'readwrite' });
     elFolderName.textContent = rootDirHandle.name;
     elFolderName.classList.remove('placeholder');
-    toast(`Folder "${rootDirHandle.name}" selected`, 'ok');
-    // Refresh version list if file already chosen
+    toast(`Folder "${rootDirHandle.name}" selected.`, 'ok');
     if (selectedFile) await refreshVersions();
   } catch (err) {
     if (err.name !== 'AbortError') toast('Could not access folder: ' + err.message, 'err');
   }
 });
 
-// ─────────────────────────────────────────────────────────────────────
-// SELECT FILE
-// ─────────────────────────────────────────────────────────────────────
 elFileBtn.addEventListener('click', async () => {
   try {
     const [handle] = await showOpenFilePicker({
@@ -485,16 +829,15 @@ elFileBtn.addEventListener('click', async () => {
         description: 'Spreadsheet files',
         accept: {
           'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
-          'text/csv': ['.csv'],
+          'text/csv': ['.csv']
         }
       }],
       excludeAcceptAllOption: true,
-      multiple: false,
+      multiple: false
     });
 
     const file = await handle.getFile();
-    const ext  = file.name.split('.').pop().toLowerCase();
-
+    const ext = file.name.split('.').pop().toLowerCase();
     if (!['xlsx', 'csv'].includes(ext)) {
       toast('Only .xlsx and .csv files are supported.', 'err');
       return;
@@ -503,7 +846,7 @@ elFileBtn.addEventListener('click', async () => {
     selectedFile = { handle, name: file.name, ext };
     elFileName.textContent = file.name;
     elFileName.classList.remove('placeholder');
-    toast(`File "${file.name}" selected`, 'ok');
+    toast(`File "${file.name}" selected.`, 'ok');
 
     if (rootDirHandle) await refreshVersions();
   } catch (err) {
@@ -511,144 +854,118 @@ elFileBtn.addEventListener('click', async () => {
   }
 });
 
-// ─────────────────────────────────────────────────────────────────────
-// SAVE VERSION  (core feature)
-// ─────────────────────────────────────────────────────────────────────
 elSaveBtn.addEventListener('click', async () => {
-  // Guards
   if (!rootDirHandle) { toast('Please select a workspace folder first.', 'warn'); return; }
-  if (!selectedFile)  { toast('Please select a file first.', 'warn'); return; }
+  if (!selectedFile) { toast('Please select a file first.', 'warn'); return; }
 
-  // Build checkpoint folder name
-  const rawNote     = elNoteInput.value.trim();
-  const note        = rawNote ? safeName(rawNote) : 'auto';
-  const ts          = makeTimestamp();
-  let   cpFolderName = `${ts}_${note}`;
+  const rawNote = elNoteInput.value.trim();
+  const note = rawNote ? safeName(rawNote) : 'auto';
+  const ts = makeTimestamp();
+  let cpFolderName = `${ts}_${note}`;
 
-  // Disable button while saving
   elSaveBtn.disabled = true;
   elSaveBtn.innerHTML = '<span class="spinner"></span> Saving…';
 
   try {
-    // 1. Ensure  _checkpoints/<filename>/  exists
     const checkpointsRoot = await getOrCreateDir(rootDirHandle, '_checkpoints');
-    const baseName        = selectedFile.name.replace(/\.[^.]+$/, '');   // strip ext
-    const fileSlot        = await getOrCreateDir(checkpointsRoot, baseName);
+    const baseName = selectedFile.name.replace(/\.[^.]+$/, '');
+    const fileSlot = await getOrCreateDir(checkpointsRoot, baseName);
 
-    // 2. Handle duplicate timestamp – append random 3-char suffix if needed
     try {
       await fileSlot.getDirectoryHandle(cpFolderName);
-      // If we get here the folder already exists – append suffix
       cpFolderName += '_' + Math.random().toString(36).slice(2, 5);
-    } catch { /* doesn't exist – good */ }
+    } catch {}
 
-    // 3. Create the timestamped checkpoint folder
     const cpDir = await getOrCreateDir(fileSlot, cpFolderName);
-
-    // 4. Copy file content into checkpoint folder
     const buffer = await readFileHandle(selectedFile.handle);
     await writeFile(cpDir, selectedFile.name, buffer);
 
     elNoteInput.value = '';
-    toast(`✅ Version saved: ${cpFolderName}`, 'ok');
+    toast(`Version saved: ${cpFolderName}`, 'ok');
     await refreshVersions();
-
   } catch (err) {
     toast('Save failed: ' + err.message, 'err');
   } finally {
     elSaveBtn.disabled = false;
-    elSaveBtn.innerHTML = `<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12l5 5L19 7"/></svg> Save Version`;
+    elSaveBtn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12l5 5L19 7"/></svg> Save Version';
   }
 });
 
-// ─────────────────────────────────────────────────────────────────────
-// REFRESH VERSION HISTORY
-// ─────────────────────────────────────────────────────────────────────
 async function refreshVersions() {
   if (!rootDirHandle || !selectedFile) return;
 
   const baseName = selectedFile.name.replace(/\.[^.]+$/, '');
-  let versions   = [];
+  const versions = [];
 
   try {
     const checkpointsRoot = await rootDirHandle.getDirectoryHandle('_checkpoints');
-    const fileSlot        = await checkpointsRoot.getDirectoryHandle(baseName);
-
+    const fileSlot = await checkpointsRoot.getDirectoryHandle(baseName);
     for await (const [name, handle] of fileSlot.entries()) {
-      if (handle.kind === 'directory') {
-        versions.push({ folderName: name, dirHandle: handle });
-      }
+      if (handle.kind === 'directory') versions.push({ folderName: name, dirHandle: handle });
     }
-  } catch {
-    // _checkpoints or file subfolder doesn't exist yet — that's fine
-  }
+  } catch {}
 
-  // Sort: latest first
   versions.sort((a, b) => b.folderName.localeCompare(a.folderName));
-
-  renderVersions(versions);
+  checkpointVersions = versions;
+  renderVersions();
 }
 
-// ─────────────────────────────────────────────────────────────────────
-// RENDER VERSION LIST
-// ─────────────────────────────────────────────────────────────────────
-function renderVersions(versions) {
-  elVersionsCount.textContent = versions.length
-    ? `${versions.length} version${versions.length > 1 ? 's' : ''}`
+function renderVersions() {
+  elVersionsCount.textContent = checkpointVersions.length
+    ? `${checkpointVersions.length} version${checkpointVersions.length > 1 ? 's' : ''}`
     : '';
 
-  if (!versions.length) {
-    elVersionsList.innerHTML = `<div class="empty"><div class="empty-icon">🗂️</div>No versions saved yet. Hit "Save Version" to create your first checkpoint.</div>`;
+  if (!checkpointVersions.length) {
+    elVersionsList.innerHTML = '<div class="empty"><div class="empty-icon">🗂️</div>No checkpoint data yet. Save a version to start.</div>';
     return;
   }
 
   elVersionsList.innerHTML = '';
 
-  versions.forEach(({ folderName, dirHandle }) => {
+  checkpointVersions.forEach(({ folderName, dirHandle }) => {
     const { ts, note } = parseCheckpointName(folderName);
-
     const row = document.createElement('div');
     row.className = 'v-row';
     row.innerHTML = `
       <div class="v-dot"></div>
       <div class="v-meta">
-        <div class="v-ts">${ts}</div>
-        <div class="v-note">${escapeHtml(note)}</div>
-        <div class="v-file">${escapeHtml(selectedFile.name)}</div>
+        <div class="v-ts">${escapeHtml(ts)}</div>
+        <div class="v-note">${escapeHtml(note || 'auto')}</div>
+        <div class="v-file">${escapeHtml(selectedFile ? selectedFile.name : '')}</div>
       </div>
       <div class="v-actions">
-        <button class="btn btn-sm btn-open"    title="Download this version">⬇ Open</button>
+        <button class="btn btn-sm btn-open" title="Download this version">⬇ Open</button>
         <button class="btn btn-sm btn-restore" title="Restore this version as a new file">↩ Restore</button>
       </div>
     `;
 
-    // Open / Download
+    row.addEventListener('click', async (e) => {
+      if (e.target.closest('button')) return;
+      selectedCheckpointPreview = { folderName, dirHandle, sourceFile: selectedFile ? selectedFile.name : '' };
+      await showCheckpointPreview(selectedCheckpointPreview);
+    });
+
     row.querySelector('.btn-open').addEventListener('click', async () => {
       try {
-        const fh     = await dirHandle.getFileHandle(selectedFile.name);
+        const fh = await dirHandle.getFileHandle(selectedFile.name);
         const buffer = await readFileHandle(fh);
         downloadBuffer(buffer, selectedFile.name);
-        toast(`Downloading ${selectedFile.name}…`, 'ok');
+        toast(`Downloading ${selectedFile.name}...`, 'ok');
       } catch (err) {
         toast('Could not open version: ' + err.message, 'err');
       }
     });
 
-    // Restore
     row.querySelector('.btn-restore').addEventListener('click', async () => {
       try {
-        const restoreTs  = makeTimestamp();
-        const ext        = selectedFile.ext;
-        const base       = selectedFile.name.replace(/\.[^.]+$/, '');
+        const restoreTs = makeTimestamp();
+        const ext = selectedFile.ext;
+        const base = selectedFile.name.replace(/\.[^.]+$/, '');
         const restoredName = `${base}_restored_${restoreTs}.${ext}`;
-
-        const fh     = await dirHandle.getFileHandle(selectedFile.name);
+        const fh = await dirHandle.getFileHandle(selectedFile.name);
         const buffer = await readFileHandle(fh);
-
-        // Write restored file into workspace root
         await writeFile(rootDirHandle, restoredName, buffer);
-
-        toast(`✅ Restored as "${restoredName}" in your workspace folder.`, 'ok');
+        toast(`Restored as "${restoredName}" in your workspace folder.`, 'ok');
       } catch (err) {
         toast('Restore failed: ' + err.message, 'err');
       }
@@ -658,16 +975,534 @@ function renderVersions(versions) {
   });
 }
 
-// ─────────────────────────────────────────────────────────────────────
-// UTILITY: Escape HTML special chars
-// ─────────────────────────────────────────────────────────────────────
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;');
+async function showCheckpointPreview(item) {
+  setActiveTab('backup-log');
+
+  selectedBackupRow = null;
+  selectedFolderHandle = item.dirHandle;
+  currentPreviewHandle = item.dirHandle;
+  currentPreviewPath = item.folderName;
+
+  elPreviewContent.innerHTML = `
+    <div class="preview-meta"><strong>Selected backup:</strong> ${escapeHtml(item.folderName)}<br><strong>From checkpoint file:</strong> ${escapeHtml(item.sourceFile || '—')}</div>
+    <div class="breadcrumb">${escapeHtml(item.folderName)}</div>
+    <div class="preview-toolbar">
+      <button class="btn btn-secondary btn-sm" id="preview-back" disabled>Back</button>
+    </div>
+    <div class="preview-list" id="preview-list"></div>
+  `;
+
+  await renderHandleItems(item.dirHandle, item.folderName, []);
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   CSV Backup Log
+   ────────────────────────────────────────────────────────────────────────── */
+
+function normalizeHeaderName(name) {
+  return normalizeText(name).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function findHeaderIndex(headers, candidates) {
+  const normal = headers.map(normalizeHeaderName);
+  for (const candidate of candidates) {
+    const idx = normal.indexOf(candidate);
+    if (idx !== -1) return idx;
+  }
+  return -1;
+}
+
+function parseCSV(text) {
+  const rows = [];
+  let row = [];
+  let cell = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    const next = text[i + 1];
+
+    if (ch === '"') {
+      if (inQuotes && next === '"') {
+        cell += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (ch === ',' && !inQuotes) {
+      row.push(cell);
+      cell = '';
+      continue;
+    }
+
+    if ((ch === '\n' || ch === '\r') && !inQuotes) {
+      if (ch === '\r' && next === '\n') i++;
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = '';
+      continue;
+    }
+
+    cell += ch;
+  }
+
+  if (cell.length || row.length) {
+    row.push(cell);
+    rows.push(row);
+  }
+
+  return rows
+    .map(r => r.map(v => normalizeText(v)))
+    .filter(r => r.some(v => v !== ''));
+}
+
+function mapCSVToBackupRows(csvRows) {
+  if (!csvRows.length) throw new Error('The CSV file is empty.');
+
+  const headers = csvRows[0];
+
+  const idxDay = findHeaderIndex(headers, ['day']);
+  const idxDate = findHeaderIndex(headers, ['backup date', 'date', 'backupdate']);
+  const idxPath = findHeaderIndex(headers, ['folder link', 'folder path', 'root folder', 'folder', 'path', 'backup folder']);
+  const idxFiles = findHeaderIndex(headers, ['no of files', 'no files', 'no of file', 'no offile', 'no of files ', 'no of files.', 'no. of files', 'number of files', 'files']);
+  const idxType = findHeaderIndex(headers, ['type', 'backup type']);
+
+  const missing = [];
+  if (idxDay < 0) missing.push('Day');
+  if (idxDate < 0) missing.push('Backup date');
+  if (idxPath < 0) missing.push('Folder path / link');
+  if (idxFiles < 0) missing.push('No. of files');
+  if (idxType < 0) missing.push('Type');
+
+  if (missing.length) {
+    throw new Error('Some columns are missing: ' + missing.join(', '));
+  }
+
+  const mapped = [];
+  for (let i = 1; i < csvRows.length; i++) {
+    const r = csvRows[i];
+    const day = normalizeText(r[idxDay]);
+    const backupDate = normalizeText(r[idxDate]);
+    const folderPath = normalizeText(r[idxPath]);
+    const filesRaw = normalizeText(r[idxFiles]);
+    const typeRaw = normalizeText(r[idxType]);
+
+    if (![day, backupDate, folderPath, filesRaw, typeRaw].some(Boolean)) continue;
+
+    const parsedDate = parseFlexibleDate(backupDate);
+
+    mapped.push({
+      id: `b_${i}_${Math.random().toString(36).slice(2, 7)}`,
+      day: day || '—',
+      backupDate: backupDate || '—',
+      parsedDate,
+      folderPath,
+      noOfFilesRaw: filesRaw || '—',
+      noOfFiles: parseNumberValue(filesRaw),
+      type: normalizedType(typeRaw)
+    });
+  }
+
+  mapped.sort((a, b) => {
+    if (a.parsedDate && b.parsedDate) return b.parsedDate - a.parsedDate;
+    if (a.parsedDate && !b.parsedDate) return -1;
+    if (!a.parsedDate && b.parsedDate) return 1;
+    return 0;
+  });
+
+  return mapped;
+}
+
+elCsvInput.addEventListener('change', async () => {
+  const file = elCsvInput.files && elCsvInput.files[0];
+  if (!file) return;
+
+  elCsvFileName.textContent = file.name;
+
+  try {
+    const text = await file.text();
+    const csvRows = parseCSV(text);
+    const mapped = mapCSVToBackupRows(csvRows);
+
+    originalBackupRows = mapped;
+    selectedBackupRow = null;
+    selectedFolderHandle = null;
+    currentPreviewHandle = null;
+    currentPreviewPath = '';
+
+    applyBackupFilters();
+    renderSummary();
+    renderPreviewEmpty('Select a backup entry to preview its contents.');
+
+    toast(`Loaded ${mapped.length} backup entr${mapped.length === 1 ? 'y' : 'ies'}.`, 'ok');
+  } catch (err) {
+    originalBackupRows = [];
+    filteredBackupRows = [];
+    renderBackupTable();
+    renderSummary();
+    renderPreviewEmpty('Select a backup entry to preview its contents.');
+    toast('Could not load CSV: ' + err.message, 'warn');
+  }
+});
+
+function renderSummary() {
+  if (!originalBackupRows.length) {
+    elSummaryCards.innerHTML = '';
+    return;
+  }
+
+  const fullCount = originalBackupRows.filter(r => r.type.toLowerCase() === 'full backup').length;
+  const incrementalCount = originalBackupRows.filter(r => r.type.toLowerCase() === 'incremental backup').length;
+  const noBackupCount = originalBackupRows.filter(r => r.type.toLowerCase() === 'no backup required').length;
+
+  elSummaryCards.innerHTML = `
+    <div class="summary-card"><div class="k">Total entries</div><div class="v">${originalBackupRows.length}</div></div>
+    <div class="summary-card"><div class="k">Full backups</div><div class="v">${fullCount}</div></div>
+    <div class="summary-card"><div class="k">Incremental backups</div><div class="v">${incrementalCount}</div></div>
+    <div class="summary-card"><div class="k">No backup required</div><div class="v">${noBackupCount}</div></div>
+  `;
+}
+
+function applyBackupFilters() {
+  const q = normalizeText(elFilterSearch.value).toLowerCase();
+  const typeValue = normalizeText(elFilterType.value).toLowerCase();
+  const fromDate = normalizeText(elFilterFrom.value);
+  const toDate = normalizeText(elFilterTo.value);
+  const fileCount = normalizeText(elFilterFileCount.value);
+  const pathPresence = normalizeText(elFilterPathPresence.value);
+
+  filteredBackupRows = originalBackupRows.filter(row => {
+    if (q) {
+      const hay = `${row.day} ${row.backupDate} ${row.folderPath} ${row.type}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+
+    if (typeValue !== 'all' && row.type.toLowerCase() !== typeValue) return false;
+
+    if (fromDate && row.parsedDate && toISODate(row.parsedDate) < fromDate) return false;
+    if (toDate && row.parsedDate && toISODate(row.parsedDate) > toDate) return false;
+    if ((fromDate || toDate) && !row.parsedDate) return false;
+
+    if (fileCount !== 'all') {
+      const n = row.noOfFiles;
+      if (n == null) return false;
+      if (fileCount === 'zero' && n !== 0) return false;
+      if (fileCount === '1-10' && (n < 1 || n > 10)) return false;
+      if (fileCount === '11+' && n < 11) return false;
+    }
+
+    if (pathPresence === 'has' && !normalizeText(row.folderPath)) return false;
+    if (pathPresence === 'missing' && normalizeText(row.folderPath)) return false;
+
+    return true;
+  });
+
+  renderBackupTable();
+}
+
+function renderBackupTable() {
+  if (!originalBackupRows.length) {
+    elResultsCount.textContent = 'Load a backup log CSV file to view backup activity.';
+    elBackupTableBody.innerHTML = '<tr><td colspan="6"><div class="empty">Load a backup log CSV file to view backup activity.</div></td></tr>';
+    return;
+  }
+
+  elResultsCount.textContent = `Showing ${filteredBackupRows.length} of ${originalBackupRows.length} backups`;
+
+  if (!filteredBackupRows.length) {
+    elBackupTableBody.innerHTML = '<tr><td colspan="6"><div class="empty">No backups match the current filters.</div></td></tr>';
+    return;
+  }
+
+  const selectedId = selectedBackupRow ? selectedBackupRow.id : '';
+
+  elBackupTableBody.innerHTML = filteredBackupRows.map(row => {
+    const fileLink = convertPathToFileUrl(row.folderPath);
+    return `
+      <tr data-id="${row.id}" class="${selectedId === row.id ? 'selected' : ''}">
+        <td>${escapeHtml(row.day)}</td>
+        <td>${escapeHtml(row.backupDate)}</td>
+        <td class="cell-path" title="${escapeHtml(row.folderPath || '')}">${escapeHtml(row.folderPath || '—')}</td>
+        <td>${escapeHtml(row.noOfFilesRaw)}</td>
+        <td>${escapeHtml(row.type)}</td>
+        <td>
+          <div style="display:flex;gap:.35rem;flex-wrap:wrap;">
+            <button class="btn btn-secondary btn-sm act-open" data-id="${row.id}">Open Folder</button>
+            <button class="btn btn-secondary btn-sm act-copy" data-id="${row.id}">Copy Path</button>
+            ${fileLink ? `<button class="btn btn-secondary btn-sm act-link" data-id="${row.id}">Open Link</button>` : ''}
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  Array.from(elBackupTableBody.querySelectorAll('tr[data-id]')).forEach(tr => {
+    tr.addEventListener('click', async (e) => {
+      const row = filteredBackupRows.find(r => r.id === tr.dataset.id);
+      if (!row) return;
+
+      if (e.target.closest('button')) return;
+      selectedBackupRow = row;
+      await showBackupPreviewForRow(row);
+      renderBackupTable();
+    });
+  });
+
+  Array.from(elBackupTableBody.querySelectorAll('.act-copy')).forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const row = filteredBackupRows.find(r => r.id === btn.dataset.id);
+      if (!row || !row.folderPath) { toast('No folder path to copy.', 'warn'); return; }
+      await copyToClipboard(row.folderPath);
+    });
+  });
+
+  Array.from(elBackupTableBody.querySelectorAll('.act-open')).forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const row = filteredBackupRows.find(r => r.id === btn.dataset.id);
+      if (!row || !row.folderPath) { toast('No folder path available for this row.', 'warn'); return; }
+      attemptOpenPath(row.folderPath);
+    });
+  });
+
+  Array.from(elBackupTableBody.querySelectorAll('.act-link')).forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const row = filteredBackupRows.find(r => r.id === btn.dataset.id);
+      if (!row || !row.folderPath) return;
+      const fileUrl = convertPathToFileUrl(row.folderPath);
+      if (!fileUrl) { toast('No local file link available for this path.', 'warn'); return; }
+      window.open(fileUrl, '_blank', 'noopener');
+      toast('Attempted to open path link. Browser may block it.', 'warn');
+    });
+  });
+}
+
+function attemptOpenPath(rawPath) {
+  const fileUrl = convertPathToFileUrl(rawPath);
+  if (!fileUrl) {
+    toast('Cannot create a local link for this path. Copy the path and open it in your file explorer.', 'warn');
+    return;
+  }
+
+  try {
+    window.open(fileUrl, '_blank', 'noopener');
+    toast('Attempted to open folder link. Direct opening may be blocked by your browser.', 'warn');
+  } catch {
+    toast('Browser blocked opening this local path. Please copy the path and open it manually.', 'warn');
+  }
+}
+
+async function handleCreateBackupNow() {
+  if (BACKUP_LAUNCHER_URL) {
+    window.location.href = BACKUP_LAUNCHER_URL;
+    toast('Trying to trigger backup launcher...', 'ok');
+    return;
+  }
+
+  toast('Backup trigger is not connected in this browser-only version. Please run the backup script from your system or desktop launcher.', 'warn');
+}
+
+elCreateBackupBtn.addEventListener('click', handleCreateBackupNow);
+
+function renderPreviewEmpty(message) {
+  elPreviewContent.innerHTML = `<div class="empty"><div class="empty-icon">📂</div>${escapeHtml(message)}</div>`;
+}
+
+async function showBackupPreviewForRow(row) {
+  selectedBackupRow = row;
+  selectedFolderHandle = null;
+  currentPreviewHandle = null;
+  currentPreviewPath = row.folderPath || '';
+
+  const mappedHandle = csvPathHandleMap.get((row.folderPath || '').toLowerCase());
+  if (mappedHandle) {
+    selectedFolderHandle = mappedHandle;
+    currentPreviewHandle = mappedHandle;
+  }
+
+  const pathText = row.folderPath || '—';
+
+  elPreviewContent.innerHTML = `
+    <div class="preview-meta"><strong>Selected backup:</strong> ${escapeHtml(row.day)} • ${escapeHtml(row.backupDate)}<br><strong>Folder/path:</strong> ${escapeHtml(pathText)}</div>
+    <div class="breadcrumb" id="preview-breadcrumb">${escapeHtml(pathText || '—')}</div>
+    <div class="preview-toolbar">
+      <button class="btn btn-secondary btn-sm" id="preview-open-folder">Open Folder</button>
+      <button class="btn btn-secondary btn-sm" id="preview-copy-path">Copy Path</button>
+      <button class="btn btn-secondary btn-sm" id="preview-select-folder">Select Folder For Preview</button>
+      <button class="btn btn-secondary btn-sm" id="preview-back" disabled>Back</button>
+    </div>
+    <div class="preview-list" id="preview-list"></div>
+    <div class="muted">This backup path can be viewed here after the folder is selected through the browser.</div>
+  `;
+
+  document.getElementById('preview-open-folder').addEventListener('click', () => {
+    if (!row.folderPath) { toast('No folder path available for this row.', 'warn'); return; }
+    attemptOpenPath(row.folderPath);
+  });
+
+  document.getElementById('preview-copy-path').addEventListener('click', async () => {
+    if (!row.folderPath) { toast('No folder path available for this row.', 'warn'); return; }
+    await copyToClipboard(row.folderPath);
+  });
+
+  document.getElementById('preview-select-folder').addEventListener('click', async () => {
+    if (!('showDirectoryPicker' in window)) {
+      toast('Folder preview needs a supported browser with folder access.', 'warn');
+      return;
+    }
+
+    try {
+      const picked = await showDirectoryPicker({ mode: 'read' });
+      selectedFolderHandle = picked;
+      currentPreviewHandle = picked;
+      currentPreviewPath = picked.name;
+
+      if (row.folderPath) {
+        csvPathHandleMap.set(row.folderPath.toLowerCase(), picked);
+      }
+
+      await renderHandleItems(picked, picked.name, []);
+      toast('Folder selected for preview.', 'ok');
+    } catch (err) {
+      if (err.name !== 'AbortError') toast('Could not select folder for preview: ' + err.message, 'err');
+    }
+  });
+
+  if (selectedFolderHandle) {
+    await renderHandleItems(selectedFolderHandle, selectedFolderHandle.name, []);
+  } else {
+    const list = document.getElementById('preview-list');
+    list.innerHTML = '<div class="empty" style="padding:1rem;">Preview not available until this folder is selected through the browser.</div>';
+  }
+}
+
+async function renderHandleItems(handle, label, pathTrail) {
+  currentPreviewHandle = handle;
+
+  const trail = [...pathTrail, label];
+  currentPreviewPath = trail.join(' / ');
+
+  const breadcrumb = document.getElementById('preview-breadcrumb');
+  const list = document.getElementById('preview-list');
+  const backBtn = document.getElementById('preview-back');
+
+  if (!list) return;
+
+  if (breadcrumb) breadcrumb.textContent = currentPreviewPath;
+
+  if (backBtn) {
+    backBtn.disabled = trail.length <= 1;
+    backBtn.onclick = async () => {
+      if (trail.length <= 1) return;
+      const targetTrail = trail.slice(0, -1);
+      let ptr = selectedFolderHandle;
+      for (let i = 1; i < targetTrail.length; i++) {
+        ptr = await ptr.getDirectoryHandle(targetTrail[i]);
+      }
+      await renderHandleItems(ptr, targetTrail[targetTrail.length - 1], targetTrail.slice(0, -1));
+    };
+  }
+
+  let entries = [];
+  try {
+    for await (const [name, child] of handle.entries()) {
+      entries.push({ name, kind: child.kind, handle: child });
+    }
+  } catch {
+    list.innerHTML = '<div class="empty" style="padding:1rem;">Preview not available for this folder in your browser session.</div>';
+    return;
+  }
+
+  entries.sort((a, b) => {
+    if (a.kind !== b.kind) return a.kind === 'directory' ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
+
+  if (!entries.length) {
+    list.innerHTML = '<div class="empty" style="padding:1rem;">This folder is empty.</div>';
+    return;
+  }
+
+  const chunks = [];
+  for (const item of entries) {
+    let sizeText = '';
+    let modifiedText = '';
+
+    if (item.kind === 'file') {
+      try {
+        const f = await item.handle.getFile();
+        sizeText = `${f.size} bytes`;
+        modifiedText = new Date(f.lastModified).toLocaleString();
+      } catch {
+        sizeText = '';
+        modifiedText = '';
+      }
+    }
+
+    chunks.push(`
+      <div class="preview-item" data-name="${escapeHtml(item.name)}" data-kind="${item.kind}">
+        <div>${item.kind === 'directory' ? '📁' : '📄'}</div>
+        <div>${escapeHtml(item.name)}</div>
+        <div class="muted">${escapeHtml(item.kind === 'directory' ? 'folder' : 'file')}</div>
+        <div class="muted">${escapeHtml(sizeText || modifiedText ? `${sizeText}${sizeText && modifiedText ? ' • ' : ''}${modifiedText}` : '—')}</div>
+      </div>
+    `);
+  }
+
+  list.innerHTML = chunks.join('');
+
+  Array.from(list.querySelectorAll('.preview-item')).forEach(div => {
+    div.addEventListener('click', async () => {
+      const item = entries.find(e => e.name === div.dataset.name && e.kind === div.dataset.kind);
+      if (!item) return;
+
+      if (item.kind === 'directory') {
+        await renderHandleItems(item.handle, item.name, trail);
+      } else {
+        try {
+          const file = await item.handle.getFile();
+          const url = URL.createObjectURL(file);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = file.name;
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+          toast(`Downloading ${file.name}...`, 'ok');
+        } catch (err) {
+          toast('Could not open file: ' + err.message, 'err');
+        }
+      }
+    });
+  });
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Filter events
+   ────────────────────────────────────────────────────────────────────────── */
+[elFilterSearch, elFilterType, elFilterFrom, elFilterTo, elFilterFileCount, elFilterPathPresence]
+  .forEach(el => el.addEventListener('input', applyBackupFilters));
+
+[elFilterType, elFilterFileCount, elFilterPathPresence].forEach(el =>
+  el.addEventListener('change', applyBackupFilters)
+);
+
+elBtnClearFilters.addEventListener('click', () => {
+  elFilterSearch.value = '';
+  elFilterType.value = 'all';
+  elFilterFrom.value = '';
+  elFilterTo.value = '';
+  elFilterFileCount.value = 'all';
+  elFilterPathPresence.value = 'all';
+  applyBackupFilters();
+});
+
+renderBackupTable();
 </script>
 </body>
 </html>
