@@ -1,169 +1,269 @@
-# Local Checkpoints & Backup Activity Tool
+# Folder Checkpoint Tool
 
-## 2. Overview
+This tool helps you save safe checkpoints of an Excel or CSV file while you work.
+It is made for everyday office use, not for programmers.
+If a file gets changed by mistake, you can restore an older saved copy without replacing your current file directly.
 
-This project is a simple, local backup tool for people who do not use Git or command-line workflows.
+## Who this is for
 
-It helps you create safe checkpoints of your working files, keep a history of backups, and review older versions in a visual dashboard.
+This tool is for people who work with important files and want peace of mind, for example:
 
-It is designed for non-technical users such as accountants, Excel users, and office teams who want a clear and reliable way to save work over time.
+- Accountants
+- Excel-heavy users
+- Tally users
+- Office/admin staff
+- Anyone creating file names like `final_v2_last_final.xlsx`
 
-Why this tool exists:
+## Why this tool is useful
 
-- To make backups easy (double-click and done)
-- To avoid complex developer tools
-- To keep everything local and portable
-- To provide a clear history of what was backed up and when
+If you have ever:
 
-## 3. Key Features
+- overwritten the wrong Excel file,
+- lost an older correct version,
+- created too many confusing copies,
+- felt afraid to edit a file because you might break it,
 
-- **Local-first backup system**
-  - Your files and backup history stay on your machine.
-- **No installation for UI**
-  - Open `index.html` directly in any modern browser.
-- **Works on Windows and Linux**
-  - Includes both `run_backup.bat` and `run_backup.sh`.
-- **Double-click backup execution**
-  - Easy backup trigger for everyday users.
-- **CSV-based backup history**
-  - Every backup is logged in `sampleLog.csv`.
-- **Backup filtering and search**
-  - Quickly find specific backup entries.
-- **File-explorer-like preview**
-  - View and access previous checkpoint folders.
-- **Portable (copy folder → works)**
-  - Move the project folder to another location or machine and keep using it.
+this tool is for you.
 
-## 4. How It Works
+It gives you simple checkpoints so you can go back when needed.
 
-The flow is simple:
+## What this tool does
 
-1. You run a backup script (`.bat` on Windows or `.sh` on Linux).
-2. A new backup folder is created with a timestamp.
-3. Your source files are copied into that backup folder.
-4. The CSV log is updated with a new entry.
-5. The web dashboard (`index.html`) reads the CSV and shows your backup history.
+In the current version, this tool works like this:
 
-In short: **User runs script → backup created → CSV updated → HTML reads CSV**.
+1. You choose a **working folder**.
+2. You choose one **Excel (`.xlsx`) or CSV (`.csv`) file**.
+3. You click **Save Version** to store a checkpoint.
+4. Saved checkpoints are kept inside:
+   - `versionControl/_checkpoints/` (inside your selected folder)
+5. You can later:
+   - download an older saved copy (**Open**), or
+   - create a restored copy in your working folder (**Restore**).
 
-## 5. Setup Instructions
+> Important: Right now, the app saves checkpoints for the **selected file**, not the full folder contents.
 
-1. Download or copy the full `versionControl/` folder to your computer.
-2. No installation is required for the web interface.
-3. Python is **not** required.
-4. Backup scripts are already included and ready to use.
+## What this tool does NOT do
 
-## 6. How to Create a Backup
+To avoid confusion, here is what it does **not** do:
 
-### Windows
+- It does not edit your Excel or CSV data by itself.
+- It does not upload your files to the cloud.
+- It does not share your data automatically.
+- It does not replace Excel or Tally.
+- It does not behave like Google Drive sync.
+- It does not overwrite your current file during restore.
+  - It creates a **new restored file** with `_restored_...` in the name.
 
-Double-click:
+## Before you start
 
-`run_backup.bat`
+Please make sure you have:
 
-### Linux
+1. A Chromium-based browser (recommended):
+   - Google Chrome or Microsoft Edge
+2. This project folder available on your computer
+3. Permission to allow folder and file access when your browser asks
 
-Run:
+If your browser does not support folder access, some features may not work.
 
-```bash
-./run_backup.sh
-```
+## How to open and run the tool
 
-What happens automatically:
+1. Keep this project folder on your computer.
+2. Open `index.html` in Google Chrome or Microsoft Edge.
+3. On the **Checkpoints** tab, click the folder box (**Workspace Folder**) and choose your working folder.
+4. Click the file box (**Target File (.xlsx / .csv)**) and choose your file.
+5. (Optional) Type a short note in **Note (optional)**.
+6. Click **Save Version**.
 
-- A new timestamped backup folder is created
-- Files are copied from `MAINFILE/`
-- The CSV log is updated with backup details
+That’s it. Your checkpoint is now saved locally.
 
-## 7. How to Use the Web App
+## How to use it — step by step
 
-1. Open `index.html` in your browser.
-2. Go to the **Backup Log** tab.
-3. Load the CSV log file (or use auto-load if available).
-4. View the list of backups.
-5. Use filters/search to narrow results.
-6. Click a row to preview that backup.
-7. Use actions such as:
-   - **Open Folder**
-   - **Copy Path**
+### 1) Select your working folder
 
-## 8. CSV Log Format
+Choose the folder where your real files are kept (example: `ClientA` or `March-GST-Files`).
 
-Example columns:
+Try to choose one stable folder you normally use, instead of moving between many folders.
 
-`Day,Backup date,folder path,No. of files,Type`
+### 2) Select the file you want to protect
 
-What each column means:
+Click **Target File (.xlsx / .csv)** and choose one file.
 
-- **Day**: Weekday name for the backup (for example, Monday)
-- **Backup date**: Date/time when the backup was created
-- **folder path**: Relative path to the checkpoint folder
-- **No. of files**: Number of files copied in that backup
-- **Type**: Backup label/category (if used by your workflow)
+Examples:
 
-## 9. Folder Structure Explanation
+- `sales.xlsx`
+- `gst-summary.csv`
+
+### 3) Save a checkpoint
+
+Click **Save Version** whenever you want a safe point.
+
+Good times to save:
+
+- before editing formulas
+- before GST/tax updates
+- before cleanup or delete actions
+- before sharing file with others
+
+You can add a short note like:
+
+- `before-gst`
+- `before-april-close`
+
+### 4) View older checkpoints
+
+Saved versions appear in the list on the right side.
+
+Each entry shows:
+
+- date/time
+- your note
+- file name
+
+### 5) Use an older checkpoint
+
+For any saved version, you have two actions:
+
+- **Open**: downloads that saved version to your computer.
+- **Restore**: writes a restored copy into your selected working folder.
+
+Restore example name:
+
+- `sales_restored_2026-04-07_14-35.xlsx`
+
+So your current `sales.xlsx` is not overwritten directly.
+
+## Example workflow (accountant example)
+
+1. You keep client files in `ClientA`.
+2. You select folder `ClientA` and file `sales.xlsx`.
+3. You save a checkpoint with note `before-gst`.
+4. You make GST edits and later notice a mistake.
+5. In the saved versions list, you click **Restore** on the earlier checkpoint.
+6. A new file appears in `ClientA` (example: `sales_restored_2026-04-07_14-35.xlsx`).
+7. You open the restored file, verify data, and continue safely.
+
+## Where checkpoints are stored
+
+Inside your selected working folder, checkpoints are saved in this path:
 
 ```text
-versionControl/
-├─ index.html
-├─ README.md
-├─ run_backup.bat
-├─ run_backup.sh
-├─ MAINFILE/
-└─ versionControl/
-   ├─ sampleLog.csv
-   └─ _checkpoints/
+YourWorkingFolder/
+  versionControl/
+    _checkpoints/
+      sales/
+        2026-04-07_14-35_before-gst/
+          sales.xlsx
 ```
 
-Simple explanation:
+Another example:
 
-- **MAINFILE/**
-  - Your original working files (source files to back up).
-- **versionControl/_checkpoints/**
-  - Stores timestamped backup versions.
-- **versionControl/sampleLog.csv**
-  - Stores backup history entries used by the dashboard.
-- **index.html**
-  - Visual dashboard to browse backup activity.
-- **run_backup.bat / run_backup.sh**
-  - Scripts that create backups and update the log.
+```text
+ClientA/
+  sales.xlsx
+  report.xlsx
+  versionControl/
+    _checkpoints/
+      sales/
+        2026-04-06_18-30_before-gst/
+          sales.xlsx
+```
 
-## 10. Important Notes
+What this means:
 
-- All paths are relative, so the project is portable.
-- No machine-specific absolute paths are required.
-- Some browsers may block opening folders directly for security reasons.
-- **Copy Path** is the most reliable option when direct folder opening is blocked.
-- Backups are created by the scripts, not by the browser page itself.
+- `_checkpoints` is the storage area for saved versions.
+- Each file gets its own subfolder (example: `sales`).
+- Each checkpoint gets its own timestamp + note folder.
 
-## 11. Create Backup Now Button
+## How restore works
 
-- The **Create Backup Now** button is currently a placeholder.
-- Browsers cannot reliably run local system scripts directly for security reasons.
-- This button is included for possible future integration.
+When you click **Restore**:
 
-## 12. Cross Platform Support
+1. The tool reads the selected saved checkpoint.
+2. It creates a **new file** in your working folder.
+3. The new file name includes `_restored_` and a timestamp.
 
-- Works on **Windows** using `run_backup.bat`
-- Works on **Linux** using `run_backup.sh`
-- No Python required
-- No installation required for the UI
+Why this is safer:
 
-## 13. Limitations
+- Your current file is not replaced automatically.
+- You can compare the current file and restored file before deciding what to keep.
 
-- Browser-based apps cannot always open file explorer reliably.
-- Preview behavior may depend on local browser and file permissions.
-- Backup creation must be triggered externally through the provided scripts.
+After restore, you can:
 
-## 14. Future Improvements
+- open both files,
+- copy required sheets/data,
+- keep the best one.
 
-- Connect **Create Backup Now** directly to backup scripts
-- Offer a desktop app version (Electron or Tauri)
-- Add automatic backup scheduling
-- Improve backup preview and navigation experience
+## Tips for safe use
 
-## 15. Conclusion
+- Save a checkpoint before major edits.
+- Write meaningful notes (`before-audit`, `before-month-close`).
+- Do not manually edit checkpoint folders unless you understand the impact.
+- Avoid renaming/moving the working folder while actively using the page.
+- Keep enough disk space for multiple saved copies.
 
-This tool is a **simple, portable, and safe** way to manage local file backups.
+## Common questions (FAQ)
 
-It is built for non-technical users who want clear checkpoint history without Git, setup complexity, or cloud dependency.
+### Will this upload my files anywhere?
+No. It runs locally in your browser and saves locally.
+
+### Will this delete my original files?
+No. Save and restore actions create copies; restore creates a new file name.
+
+### Can I use this for Excel files?
+Yes. `.xlsx` is supported.
+
+### Can I use this for CSV files?
+Yes. `.csv` is supported.
+
+### Can I protect a full folder in one click?
+Not in the current version. Right now, checkpoints are saved for the selected file.
+
+### What happens if I save many checkpoints?
+All are kept in the checkpoint folder until you remove old ones.
+
+### Can I delete old checkpoints later?
+Yes, but do it carefully. Keep at least a few recent safe points.
+
+## Troubleshooting
+
+### Browser does not show folder picker
+
+- Use Google Chrome or Microsoft Edge.
+- Make sure you opened `index.html` directly.
+- Refresh and try again.
+
+### Nothing happens after clicking Save Version
+
+- Confirm both are selected:
+  - workspace folder
+  - target file
+- Check if browser showed a permission prompt.
+
+### Permission denied for folder/file
+
+- Try selecting the folder and file again.
+- Allow access when browser asks.
+
+### Checkpoint not visible in list
+
+- Confirm you selected the same file name as before.
+- Save again and wait a moment.
+- Re-select the folder and file to refresh the list.
+
+### Restored copy not found
+
+- Look in the selected working folder.
+- Search for file names containing `_restored_`.
+
+## Privacy note
+
+Your files stay on your own computer.
+This tool works locally in your browser.
+There is no cloud upload in the current implementation.
+
+(There is a separate **Backup Log** tab for viewing CSV backup records, but the browser button **Create Backup Now** is currently not connected to a real backup trigger.)
+
+## Closing note
+
+This tool is made to reduce fear while working with important files.
+Use checkpoints often, and you can work with more confidence and less stress.
