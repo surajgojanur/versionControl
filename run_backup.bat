@@ -12,8 +12,8 @@ if "%BASE_DIR:~-1%"=="\" set BASE_DIR=%BASE_DIR:~0,-1%
 REM ==============================
 REM Paths (RELATIVE STRUCTURE)
 REM ==============================
-set SOURCE_FILE=%BASE_DIR%\MAINFILE\mainFile2.xlsx
-set BACKUP_ROOT=%BASE_DIR%\versionControl\_checkpoints\mainFile2
+set SOURCE_FILE=%BASE_DIR%\MAINFILE\mainFile.xlsx
+set BACKUP_ROOT=%BASE_DIR%\versionControl\_checkpoints\mainFile
 set LOG_FILE=%BASE_DIR%\versionControl\sampleLog.csv
 
 REM ==============================
@@ -66,7 +66,7 @@ if not exist "%LOG_FILE%" (
 REM ==============================
 REM RELATIVE PATH (IMPORTANT)
 REM ==============================
-set REL_PATH=./versionControl/_checkpoints/mainFile2/%TIMESTAMP%_%NOTE%
+set REL_PATH=./versionControl/_checkpoints/mainFile/%TIMESTAMP%_%NOTE%
 
 REM ==============================
 REM Append log entry

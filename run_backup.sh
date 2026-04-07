@@ -4,8 +4,8 @@ set -e
 # Base directory
 BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-SOURCE_FILE="$BASE_DIR/MAINFILE/mainFile2.xlsx"
-BACKUP_ROOT="$BASE_DIR/versionControl/_checkpoints/mainFile2"
+SOURCE_FILE="$BASE_DIR/MAINFILE/mainFile.xlsx"
+BACKUP_ROOT="$BASE_DIR/versionControl/_checkpoints/mainFile"
 LOG_FILE="$BASE_DIR/versionControl/sampleLog.csv"
 
 NOTE="manual-save"
