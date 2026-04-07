@@ -433,11 +433,11 @@
   <div id="unsupported">⚠️ Your browser does not support full folder access features. Please use Google Chrome or Microsoft Edge for the best experience.</div>
 
   <div class="tabs">
-    <button class="tab-btn active" data-tab="checkpoints">Checkpoints</button>
-    <button class="tab-btn" data-tab="backup-log">Backup Log</button>
+    <button class="tab-btn" data-tab="checkpoints">Checkpoints</button>
+    <button class="tab-btn active" data-tab="backup-log">Backup Log</button>
   </div>
 
-  <section id="panel-checkpoints" class="tab-panel active">
+  <section id="panel-checkpoints" class="tab-panel">
     <div class="card">
       <div class="card-label">Workspace</div>
       <div class="ws-grid">
@@ -479,7 +479,7 @@
     </div>
   </section>
 
-  <section id="panel-backup-log" class="tab-panel">
+  <section id="panel-backup-log" class="tab-panel active">
     <div class="card">
       <div class="card-label">Backup Activity</div>
 
@@ -983,6 +983,8 @@ function setActiveTab(tabKey) {
 tabButtons.forEach(btn => {
   btn.addEventListener('click', () => setActiveTab(btn.dataset.tab));
 });
+
+setActiveTab('backup-log');
 
 /* ──────────────────────────────────────────────────────────────────────────
    Checkpoint mode (existing behavior retained)
