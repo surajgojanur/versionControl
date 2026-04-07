@@ -585,6 +585,7 @@ let rootDirHandle = null;
 let selectedFile = null;
 let checkpointVersions = [];
 let selectedCheckpointPreview = null;
+let selectedTargetMeta = null;
 
 let originalBackupRows = [];
 let filteredBackupRows = [];
@@ -665,6 +666,11 @@ function makeTimestamp() {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}-${p(d.getMinutes())}`;
 }
 
+function makeTargetId() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return `t-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 function safeName(str) {
   return str.replace(/[^a-zA-Z0-9_\-]/g, '-').substring(0, 40);
 }
@@ -683,6 +689,143 @@ async function writeFile(dirHandle, filename, buffer) {
   const writable = await fh.createWritable();
   await writable.write(buffer);
   await writable.close();
+}
+
+async function writeJson(dirHandle, filename, data) {
+  const bytes = new TextEncoder().encode(JSON.stringify(data, null, 2));
+  await writeFile(dirHandle, filename, bytes);
+}
+
+async function readJson(dirHandle, filename) {
+  try {
+    const fh = await dirHandle.getFileHandle(filename);
+    const raw = await (await fh.getFile()).text();
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+async function sha256Hex(buffer) {
+  const hash = await crypto.subtle.digest('SHA-256', buffer);
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function parseTsPrefix(name) {
+  const m = name.match(/^(\d{4}-\d{2}-\d{2}_\d{2}-\d{2})/);
+  return m ? m[1] : '';
+}
+
+async function getCheckpointsRoot() {
+  try {
+    const versionControlDir = await rootDirHandle.getDirectoryHandle('versionControl');
+    return await getOrCreateDir(versionControlDir, '_checkpoints');
+  } catch {
+    return await getOrCreateDir(rootDirHandle, '_checkpoints');
+  }
+}
+
+async function getOrCreateTargetsRoot(checkpointsRoot) {
+  return getOrCreateDir(checkpointsRoot, 'targets');
+}
+
+async function findSavedFileNameFromDir(dirHandle) {
+  const entries = [];
+  for await (const [name, handle] of dirHandle.entries()) {
+    if (handle.kind === 'file' && name !== 'version.json') entries.push(name);
+  }
+  return entries[0] || '';
+}
+
+async function loadTargetVersions(targetDir, selectedHash) {
+  const versionsDir = await targetDir.getDirectoryHandle('versions');
+  const versions = [];
+  for await (const [folderName, handle] of versionsDir.entries()) {
+    if (handle.kind !== 'directory') continue;
+    const versionMeta = await readJson(handle, 'version.json');
+    const savedFileName = versionMeta?.savedFileName || await findSavedFileNameFromDir(handle);
+    versions.push({
+      folderName,
+      dirHandle: handle,
+      sourceFile: savedFileName || '',
+      note: versionMeta?.note || '',
+      createdAt: versionMeta?.createdAt || '',
+      fileHash: versionMeta?.fileHash || ''
+    });
+  }
+  versions.sort((a, b) => b.folderName.localeCompare(a.folderName));
+  const hashMatched = selectedHash ? versions.some(v => v.fileHash && v.fileHash === selectedHash) : false;
+  return { versions, hashMatched };
+}
+
+async function resolveTargetForSelection(checkpointsRoot, selectedHash) {
+  const targetsRoot = await getOrCreateTargetsRoot(checkpointsRoot);
+
+  for await (const [targetId, handle] of targetsRoot.entries()) {
+    if (handle.kind !== 'directory') continue;
+    const meta = await readJson(handle, 'meta.json');
+    if (!meta) continue;
+    const loaded = await loadTargetVersions(handle, selectedHash);
+    if (!loaded.versions.length) continue;
+    const byName = loaded.versions.some(v => v.sourceFile === selectedFile.name);
+    const targetMeta = {
+      targetId,
+      displayName: meta.displayName || meta.originalFileName || selectedFile.name,
+      originalFileName: meta.originalFileName || selectedFile.name,
+      createdAt: meta.createdAt || '',
+      targetDir: handle
+    };
+    if (byName || loaded.hashMatched) return { ...targetMeta, versions: loaded.versions };
+  }
+
+  return null;
+}
+
+async function loadLegacyVersions(checkpointsRoot, selectedHash) {
+  const baseName = selectedFile.name.replace(/\.[^.]+$/, '');
+  const versions = [];
+  const seen = new Set();
+  const tryCollect = async (slotName, slotDir) => {
+    for await (const [folderName, versionDir] of slotDir.entries()) {
+      if (versionDir.kind !== 'directory') continue;
+      const key = `${slotName}/${folderName}`;
+      if (seen.has(key)) continue;
+      const savedFileName = await findSavedFileNameFromDir(versionDir);
+      if (!savedFileName) continue;
+      let fileHash = '';
+      try {
+        const fh = await versionDir.getFileHandle(savedFileName);
+        fileHash = await sha256Hex(await readFileHandle(fh));
+      } catch {}
+      const nameMatch = savedFileName === selectedFile.name;
+      const hashMatch = selectedHash && fileHash && fileHash === selectedHash;
+      if (slotName === baseName || nameMatch || hashMatch) {
+        seen.add(key);
+        versions.push({
+          folderName,
+          dirHandle: versionDir,
+          sourceFile: savedFileName,
+          note: '',
+          createdAt: parseTsPrefix(folderName),
+          legacySlot: slotName,
+          fileHash
+        });
+      }
+    }
+  };
+
+  try {
+    const slot = await checkpointsRoot.getDirectoryHandle(baseName);
+    await tryCollect(baseName, slot);
+  } catch {}
+
+  for await (const [slotName, slotDir] of checkpointsRoot.entries()) {
+    if (slotDir.kind !== 'directory' || slotName === 'targets' || slotName === baseName) continue;
+    await tryCollect(slotName, slotDir);
+  }
+
+  versions.sort((a, b) => b.folderName.localeCompare(a.folderName));
+  return versions;
 }
 
 function downloadBuffer(buffer, filename) {
@@ -901,19 +1044,45 @@ elSaveBtn.addEventListener('click', async () => {
   elSaveBtn.innerHTML = '<span class="spinner"></span> Saving…';
 
   try {
-    const versionControlDir = await getOrCreateDir(rootDirHandle, 'versionControl');
-    const checkpointsRoot = await getOrCreateDir(versionControlDir, '_checkpoints');
-    const baseName = selectedFile.name.replace(/\.[^.]+$/, '');
-    const fileSlot = await getOrCreateDir(checkpointsRoot, baseName);
+    const checkpointsRoot = await getCheckpointsRoot();
+    const targetsRoot = await getOrCreateTargetsRoot(checkpointsRoot);
+    const buffer = await readFileHandle(selectedFile.handle);
+    const fileHash = await sha256Hex(buffer);
+
+    if (!selectedTargetMeta) {
+      selectedTargetMeta = await resolveTargetForSelection(checkpointsRoot, fileHash);
+    }
+
+    let targetId = selectedTargetMeta?.targetId;
+    let targetDir = selectedTargetMeta?.targetDir;
+    let createdAt = selectedTargetMeta?.createdAt;
+    if (!targetDir || !targetId) {
+      targetId = makeTargetId();
+      targetDir = await getOrCreateDir(targetsRoot, targetId);
+      createdAt = new Date().toISOString();
+      await writeJson(targetDir, 'meta.json', {
+        targetId,
+        displayName: selectedFile.name,
+        originalFileName: selectedFile.name,
+        createdAt
+      });
+      selectedTargetMeta = { targetId, displayName: selectedFile.name, originalFileName: selectedFile.name, createdAt, targetDir };
+    }
+    const versionsDir = await getOrCreateDir(targetDir, 'versions');
 
     try {
-      await fileSlot.getDirectoryHandle(cpFolderName);
+      await versionsDir.getDirectoryHandle(cpFolderName);
       cpFolderName += '_' + Math.random().toString(36).slice(2, 5);
     } catch {}
 
-    const cpDir = await getOrCreateDir(fileSlot, cpFolderName);
-    const buffer = await readFileHandle(selectedFile.handle);
+    const cpDir = await getOrCreateDir(versionsDir, cpFolderName);
     await writeFile(cpDir, selectedFile.name, buffer);
+    await writeJson(cpDir, 'version.json', {
+      savedFileName: selectedFile.name,
+      note: rawNote || '',
+      createdAt: new Date().toISOString(),
+      fileHash
+    });
 
     elNoteInput.value = '';
     toast(`Version saved: ${cpFolderName}`, 'ok');
@@ -929,20 +1098,20 @@ elSaveBtn.addEventListener('click', async () => {
 async function refreshVersions() {
   if (!rootDirHandle || !selectedFile) return;
 
-  const baseName = selectedFile.name.replace(/\.[^.]+$/, '');
+  selectedTargetMeta = null;
   const versions = [];
 
   try {
-    let checkpointsRoot;
-    try {
-      const versionControlDir = await rootDirHandle.getDirectoryHandle('versionControl');
-      checkpointsRoot = await versionControlDir.getDirectoryHandle('_checkpoints');
-    } catch {
-      checkpointsRoot = await rootDirHandle.getDirectoryHandle('_checkpoints');
-    }
-    const fileSlot = await checkpointsRoot.getDirectoryHandle(baseName);
-    for await (const [name, handle] of fileSlot.entries()) {
-      if (handle.kind === 'directory') versions.push({ folderName: name, dirHandle: handle });
+    const checkpointsRoot = await getCheckpointsRoot();
+    const selectedBuffer = await readFileHandle(selectedFile.handle);
+    const selectedHash = await sha256Hex(selectedBuffer);
+    const resolved = await resolveTargetForSelection(checkpointsRoot, selectedHash);
+    if (resolved) {
+      selectedTargetMeta = resolved;
+      versions.push(...resolved.versions);
+    } else {
+      const legacy = await loadLegacyVersions(checkpointsRoot, selectedHash);
+      versions.push(...legacy);
     }
   } catch {}
 
@@ -963,16 +1132,16 @@ function renderVersions() {
 
   elVersionsList.innerHTML = '';
 
-  checkpointVersions.forEach(({ folderName, dirHandle }) => {
-    const { ts, note } = parseCheckpointName(folderName);
+  checkpointVersions.forEach(({ folderName, dirHandle, sourceFile, note: versionNote }) => {
+    const { ts, note: parsedNote } = parseCheckpointName(folderName);
     const row = document.createElement('div');
     row.className = 'v-row';
     row.innerHTML = `
       <div class="v-dot"></div>
       <div class="v-meta">
         <div class="v-ts">${escapeHtml(ts)}</div>
-        <div class="v-note">${escapeHtml(note || 'auto')}</div>
-        <div class="v-file">${escapeHtml(selectedFile ? selectedFile.name : '')}</div>
+        <div class="v-note">${escapeHtml(versionNote || parsedNote || 'auto')}</div>
+        <div class="v-file">${escapeHtml(sourceFile || (selectedFile ? selectedFile.name : ''))}</div>
       </div>
       <div class="v-actions">
         <button class="btn btn-sm btn-open" title="Download this version">⬇ Open</button>
@@ -982,16 +1151,17 @@ function renderVersions() {
 
     row.addEventListener('click', async (e) => {
       if (e.target.closest('button')) return;
-      selectedCheckpointPreview = { folderName, dirHandle, sourceFile: selectedFile ? selectedFile.name : '' };
+      selectedCheckpointPreview = { folderName, dirHandle, sourceFile: sourceFile || '' };
       await showCheckpointPreview(selectedCheckpointPreview);
     });
 
     row.querySelector('.btn-open').addEventListener('click', async () => {
       try {
-        const fh = await dirHandle.getFileHandle(selectedFile.name);
+        const snapshotName = sourceFile || selectedFile.name;
+        const fh = await dirHandle.getFileHandle(snapshotName);
         const buffer = await readFileHandle(fh);
-        downloadBuffer(buffer, selectedFile.name);
-        toast(`Downloading ${selectedFile.name}...`, 'ok');
+        downloadBuffer(buffer, snapshotName);
+        toast(`Downloading ${snapshotName}...`, 'ok');
       } catch (err) {
         toast('Could not open version: ' + err.message, 'err');
       }
@@ -1000,10 +1170,11 @@ function renderVersions() {
     row.querySelector('.btn-restore').addEventListener('click', async () => {
       try {
         const restoreTs = makeTimestamp();
-        const ext = selectedFile.ext;
-        const base = selectedFile.name.replace(/\.[^.]+$/, '');
+        const snapshotName = sourceFile || selectedFile.name;
+        const ext = snapshotName.includes('.') ? snapshotName.split('.').pop().toLowerCase() : selectedFile.ext;
+        const base = snapshotName.replace(/\.[^.]+$/, '');
         const restoredName = `${base}_restored_${restoreTs}.${ext}`;
-        const fh = await dirHandle.getFileHandle(selectedFile.name);
+        const fh = await dirHandle.getFileHandle(snapshotName);
         const buffer = await readFileHandle(fh);
         await writeFile(rootDirHandle, restoredName, buffer);
         toast(`Restored as "${restoredName}" in your workspace folder.`, 'ok');

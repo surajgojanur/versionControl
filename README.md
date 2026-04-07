@@ -33,6 +33,8 @@ Why this tool exists:
   - View and access previous checkpoint folders.
 - **Portable (copy folder → works)**
   - Move the project folder to another location or machine and keep using it.
+- **Rename-safe checkpoint history**
+  - You can rename your working file and still keep the same checkpoint timeline.
 
 ## 4. How It Works
 
@@ -113,6 +115,13 @@ versionControl/
 └─ versionControl/
    ├─ sampleLog.csv
    └─ _checkpoints/
+      └─ targets/
+         └─ <targetId>/
+            ├─ meta.json
+            └─ versions/
+               └─ <timestamp_note>/
+                  ├─ <saved-file>
+                  └─ version.json
 ```
 
 Simple explanation:
@@ -120,7 +129,7 @@ Simple explanation:
 - **MAINFILE/**
   - Your original working files (source files to back up).
 - **versionControl/_checkpoints/**
-  - Stores timestamped backup versions.
+  - Stores checkpoint history. Each tracked file uses a stable internal target ID.
 - **versionControl/sampleLog.csv**
   - Stores backup history entries used by the dashboard.
 - **index.html**
@@ -135,6 +144,9 @@ Simple explanation:
 - Some browsers may block opening folders directly for security reasons.
 - **Copy Path** is the most reliable option when direct folder opening is blocked.
 - Backups are created by the scripts, not by the browser page itself.
+- Checkpoint history does **not** depend on keeping the same file name.
+- If you rename a file (example: `sales.xlsx` → `sales-final.xlsx`), previous checkpoints still stay visible.
+- Restore is safe: restoring creates a new `_restored_...` copy and does not overwrite your current original file.
 
 ## 11. Create Backup Now Button
 
