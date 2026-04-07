@@ -5,79 +5,84 @@ REM ==============================
 REM Get base directory
 REM ==============================
 set BASE_DIR=%~dp0
-
-REM Remove trailing backslash (important for consistency)
 if "%BASE_DIR:~-1%"=="\" set BASE_DIR=%BASE_DIR:~0,-1%
 
-REM ==============================
-REM Paths (RELATIVE STRUCTURE)
-REM ==============================
-set SOURCE_FILE=%BASE_DIR%\MAINFILE\mainFile.xlsx
-set BACKUP_ROOT=%BASE_DIR%\versionControl\_checkpoints\mainFile
+set SOURCE_DIR=%BASE_DIR%\MAINFILE
+set BACKUP_ROOT_BASE=%BASE_DIR%\versionControl\_checkpoints
 set LOG_FILE=%BASE_DIR%\versionControl\sampleLog.csv
 
-REM ==============================
-REM Timestamp (via PowerShell)
-REM ==============================
-for /f %%i in ('powershell -command "Get-Date -Format yyyy-MM-dd_HH-mm"') do set TIMESTAMP=%%i
+REM Optional argument: source file path (absolute or relative to MAINFILE)
+set REQUESTED_SOURCE=%~1
+set SOURCE_FILE=
 
+if not "%REQUESTED_SOURCE%"=="" (
+    if exist "%REQUESTED_SOURCE%" (
+        set SOURCE_FILE=%REQUESTED_SOURCE%
+    ) else if exist "%SOURCE_DIR%\%REQUESTED_SOURCE%" (
+        set SOURCE_FILE=%SOURCE_DIR%\%REQUESTED_SOURCE%
+    ) else (
+        echo ❌ ERROR: Source file not found: %REQUESTED_SOURCE%
+        pause
+        exit /b 1
+    )
+) else (
+    for /f "delims=" %%f in ('dir /b /a:-d "%SOURCE_DIR%" 2^>nul') do (
+        if not defined SOURCE_FILE set SOURCE_FILE=%SOURCE_DIR%\%%f
+    )
+    if not defined SOURCE_FILE (
+        echo ❌ ERROR: No source file found in %SOURCE_DIR%
+        pause
+        exit /b 1
+    )
+)
+
+for %%F in ("%SOURCE_FILE%") do (
+    set SOURCE_BASENAME=%%~nxF
+    set SOURCE_STEM=%%~nF
+)
+
+set TARGET_FOLDER=!SOURCE_STEM!
+set TARGET_FOLDER=!TARGET_FOLDER: =_!
+set TARGET_FOLDER=!TARGET_FOLDER:(=_!
+set TARGET_FOLDER=!TARGET_FOLDER:)=_!
+set TARGET_FOLDER=!TARGET_FOLDER:[=_!
+set TARGET_FOLDER=!TARGET_FOLDER:]=_!
+set TARGET_FOLDER=!TARGET_FOLDER:{=_!
+set TARGET_FOLDER=!TARGET_FOLDER:}=_!
+set TARGET_FOLDER=!TARGET_FOLDER:^!=_!
+set TARGET_FOLDER=!TARGET_FOLDER:;=_!
+set TARGET_FOLDER=!TARGET_FOLDER:,=_!
+set TARGET_FOLDER=!TARGET_FOLDER:.=_!
+
+set BACKUP_ROOT=%BACKUP_ROOT_BASE%\!TARGET_FOLDER!
+
+for /f %%i in ('powershell -command "Get-Date -Format yyyy-MM-dd_HH-mm"') do set TIMESTAMP=%%i
 set NOTE=manual-save
 set BACKUP_FOLDER=%BACKUP_ROOT%\%TIMESTAMP%_%NOTE%
 
-REM ==============================
-REM Create directories if missing
-REM ==============================
 if not exist "%BACKUP_ROOT%" mkdir "%BACKUP_ROOT%"
 if not exist "%BACKUP_FOLDER%" mkdir "%BACKUP_FOLDER%"
 if not exist "%BASE_DIR%\versionControl" mkdir "%BASE_DIR%\versionControl"
 
-REM ==============================
-REM Check source file exists
-REM ==============================
-if not exist "%SOURCE_FILE%" (
-    echo ❌ ERROR: Source file not found!
-    echo Expected: %SOURCE_FILE%
-    pause
-    exit /b
-)
+copy "%SOURCE_FILE%" "%BACKUP_FOLDER%\%SOURCE_BASENAME%" >nul
 
-REM ==============================
-REM Copy file
-REM ==============================
-copy "%SOURCE_FILE%" "%BACKUP_FOLDER%\" >nul
-
-REM ==============================
-REM Metadata
-REM ==============================
 set FILE_COUNT=1
 set TYPE=incremental backup
 
 for /f %%i in ('powershell -command "Get-Date -Format ddd"') do set DAY=%%i
 for /f %%i in ('powershell -command "Get-Date -Format yyyy-MM-dd"') do set BACKUP_DATE=%%i
 
-REM ==============================
-REM Create CSV if not exists
-REM ==============================
 if not exist "%LOG_FILE%" (
     echo Creating new log file...
     echo Day,Backup date,folder path,No. of files,Type > "%LOG_FILE%"
 )
 
-REM ==============================
-REM RELATIVE PATH (IMPORTANT)
-REM ==============================
-set REL_PATH=./versionControl/_checkpoints/mainFile/%TIMESTAMP%_%NOTE%
+set REL_PATH=./versionControl/_checkpoints/!TARGET_FOLDER!/%TIMESTAMP%_%NOTE%
 
-REM ==============================
-REM Append log entry
-REM ==============================
 echo %DAY%,%BACKUP_DATE%,%REL_PATH%,%FILE_COUNT%,%TYPE% >> "%LOG_FILE%"
 
-REM ==============================
-REM Done
-REM ==============================
 echo.
-echo ✅ Backup created successfully!
+echo ✅ Backup created for: %SOURCE_BASENAME%
 echo 📂 Location: %BACKUP_FOLDER%
 echo 📄 Log updated: %LOG_FILE%
 echo.

@@ -22,7 +22,7 @@ Why this tool exists:
 - **No installation for UI**
   - Open `index.html` directly in any modern browser.
 - **Works on Windows and Linux**
-  - Includes both `run_backup.bat` and `run_backup.sh`.
+  - Includes both `run_backup.bat` and `run_backup.sh` with aligned backup path behavior.
 - **Double-click backup execution**
   - Easy backup trigger for everyday users.
 - **CSV-based backup history**
@@ -74,8 +74,17 @@ Run:
 What happens automatically:
 
 - A new timestamped backup folder is created
-- Files are copied from `MAINFILE/`
+- The script copies a selected source file from `MAINFILE/` (or the first file found there by default)
 - The CSV log is updated with backup details
+
+
+Optional source-file argument:
+
+- Windows: `run_backup.bat <file-name-or-path>`
+- Linux: `./run_backup.sh <file-name-or-path>`
+
+If no file is provided, the scripts automatically back up the first file found in `MAINFILE/`.
+Backups are written under `./versionControl/_checkpoints/<source-name>/...` and logged to `sampleLog.csv`.
 
 ## 7. How to Use the Web App
 
@@ -115,6 +124,9 @@ versionControl/
 └─ versionControl/
    ├─ sampleLog.csv
    └─ _checkpoints/
+      ├─ <source-name>/
+      │  └─ <timestamp_note>/
+      │     └─ <backed-up-file>
       └─ targets/
          └─ <targetId>/
             ├─ meta.json
