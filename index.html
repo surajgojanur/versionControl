@@ -496,7 +496,7 @@
       <div class="filters">
         <div class="field">
           <label for="filter-search">Search backups</label>
-          <input id="filter-search" class="input" placeholder="Search day, date, path, type" />
+          <input id="filter-search" class="input" placeholder="Search day, date, time, path, type" />
         </div>
         <div class="field">
           <label for="filter-type">Filter by type</label>
@@ -549,6 +549,7 @@
                 <tr>
                   <th>Day</th>
                   <th>Backup date</th>
+                  <th>Backup time</th>
                   <th>Folder path / link</th>
                   <th>No. of files</th>
                   <th>Type</th>
@@ -556,7 +557,7 @@
                 </tr>
               </thead>
               <tbody id="backup-table-body">
-                <tr><td colspan="6"><div class="empty">Load a backup log CSV file to view backup activity.</div></td></tr>
+                <tr><td colspan="7"><div class="empty">Load a backup log CSV file to view backup activity.</div></td></tr>
               </tbody>
             </table>
           </div>
@@ -751,6 +752,38 @@ function parseNumberValue(v) {
   const cleaned = raw.replace(/,/g, '');
   const n = Number(cleaned);
   return Number.isFinite(n) ? n : null;
+}
+
+function normalizeBackupTime(rawTime) {
+  const raw = normalizeText(rawTime);
+  if (!raw) return '';
+
+  const m = raw.match(/^(\d{1,2})[:\-](\d{1,2})$/);
+  if (!m) return '';
+
+  const hh = Number(m[1]);
+  const mm = Number(m[2]);
+  if (!Number.isInteger(hh) || !Number.isInteger(mm) || hh < 0 || hh > 23 || mm < 0 || mm > 59) return '';
+
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+}
+
+function parseBackupTimeFromPath(path) {
+  const p = normalizeText(path);
+  if (!p) return '';
+  const m = p.match(/(\d{4}-\d{2}-\d{2})_(\d{2})-(\d{2})/);
+  if (!m) return '';
+  const hh = Number(m[2]);
+  const mm = Number(m[3]);
+  if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return '';
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+}
+
+function resolveBackupTime(rawTime, folderPath) {
+  const fromColumn = normalizeBackupTime(rawTime);
+  if (fromColumn) return fromColumn;
+  const fromPath = parseBackupTimeFromPath(folderPath);
+  return fromPath || '--';
 }
 
 function normalizeRelativePath(path) {
@@ -1075,6 +1108,7 @@ function mapCSVToBackupRows(csvRows) {
 
   const idxDay = findHeaderIndex(headers, ['day']);
   const idxDate = findHeaderIndex(headers, ['backup date', 'date', 'backupdate']);
+  const idxTime = findHeaderIndex(headers, ['backup time', 'time', 'backup time ', 'backup_time', 'backuptime']);
   const idxPath = findHeaderIndex(headers, ['folder link', 'folder path', 'root folder', 'folder', 'path', 'backup folder']);
   const idxFiles = findHeaderIndex(headers, ['no of files', 'no files', 'no of file', 'no offile', 'no of files ', 'no of files.', 'no. of files', 'number of files', 'files']);
   const idxType = findHeaderIndex(headers, ['type', 'backup type']);
@@ -1095,6 +1129,7 @@ function mapCSVToBackupRows(csvRows) {
     const r = csvRows[i];
     const day = normalizeText(r[idxDay]);
     const backupDate = normalizeText(r[idxDate]);
+    const backupTime = resolveBackupTime(idxTime >= 0 ? r[idxTime] : '', normalizeText(r[idxPath]));
     const folderPathRaw = normalizeText(r[idxPath]);
     const folderPath = normalizeRelativePath(folderPathRaw);
     const filesRaw = normalizeText(r[idxFiles]);
@@ -1108,6 +1143,7 @@ function mapCSVToBackupRows(csvRows) {
       id: `b_${i}_${Math.random().toString(36).slice(2, 7)}`,
       day: day || '—',
       backupDate: backupDate || '—',
+      backupTime,
       parsedDate,
       folderPath,
       hasPortablePath: isPortableRelativePath(folderPath),
@@ -1118,7 +1154,22 @@ function mapCSVToBackupRows(csvRows) {
   }
 
   mapped.sort((a, b) => {
-    if (a.parsedDate && b.parsedDate) return b.parsedDate - a.parsedDate;
+    if (a.parsedDate && b.parsedDate) {
+      const aSortDate = new Date(a.parsedDate.getTime());
+      const bSortDate = new Date(b.parsedDate.getTime());
+      const aTime = normalizeBackupTime(a.backupTime);
+      const bTime = normalizeBackupTime(b.backupTime);
+
+      if (aTime) {
+        const [hh, mm] = aTime.split(':').map(Number);
+        aSortDate.setHours(hh, mm, 0, 0);
+      }
+      if (bTime) {
+        const [hh, mm] = bTime.split(':').map(Number);
+        bSortDate.setHours(hh, mm, 0, 0);
+      }
+      return bSortDate - aSortDate;
+    }
     if (a.parsedDate && !b.parsedDate) return -1;
     if (!a.parsedDate && b.parsedDate) return 1;
     return 0;
@@ -1187,7 +1238,7 @@ function applyBackupFilters() {
 
   filteredBackupRows = originalBackupRows.filter(row => {
     if (q) {
-      const hay = `${row.day} ${row.backupDate} ${row.folderPath} ${row.type}`.toLowerCase();
+      const hay = `${row.day} ${row.backupDate} ${row.backupTime} ${row.folderPath} ${row.type}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
 
@@ -1217,14 +1268,14 @@ function applyBackupFilters() {
 function renderBackupTable() {
   if (!originalBackupRows.length) {
     elResultsCount.textContent = 'Load a backup log CSV file to view backup activity.';
-    elBackupTableBody.innerHTML = '<tr><td colspan="6"><div class="empty">Load a backup log CSV file to view backup activity.</div></td></tr>';
+    elBackupTableBody.innerHTML = '<tr><td colspan="7"><div class="empty">Load a backup log CSV file to view backup activity.</div></td></tr>';
     return;
   }
 
   elResultsCount.textContent = `Showing ${filteredBackupRows.length} of ${originalBackupRows.length} backups`;
 
   if (!filteredBackupRows.length) {
-    elBackupTableBody.innerHTML = '<tr><td colspan="6"><div class="empty">No backups match the current filters.</div></td></tr>';
+    elBackupTableBody.innerHTML = '<tr><td colspan="7"><div class="empty">No backups match the current filters.</div></td></tr>';
     return;
   }
 
@@ -1236,6 +1287,7 @@ function renderBackupTable() {
       <tr data-id="${row.id}" class="${selectedId === row.id ? 'selected' : ''}">
         <td>${escapeHtml(row.day)}</td>
         <td>${escapeHtml(row.backupDate)}</td>
+        <td>${escapeHtml(row.backupTime || '--')}</td>
         <td class="cell-path" title="${escapeHtml(row.folderPath || '')}">${escapeHtml(row.folderPath || '—')}</td>
         <td>${escapeHtml(row.noOfFilesRaw)}</td>
         <td>${escapeHtml(row.type)}</td>
@@ -1340,7 +1392,7 @@ async function showBackupPreviewForRow(row) {
   const pathText = row.folderPath || '—';
 
   elPreviewContent.innerHTML = `
-    <div class="preview-meta"><strong>Selected backup:</strong> ${escapeHtml(row.day)} • ${escapeHtml(row.backupDate)}<br><strong>Folder/path:</strong> ${escapeHtml(pathText)}</div>
+    <div class="preview-meta"><strong>Selected backup:</strong> ${escapeHtml(row.day)}<br><strong>Backup date:</strong> ${escapeHtml(row.backupDate)}<br><strong>Backup time:</strong> ${escapeHtml(row.backupTime || '--')}<br><strong>Folder/path:</strong> ${escapeHtml(pathText)}</div>
     <div class="breadcrumb" id="preview-breadcrumb">${escapeHtml(pathText || '—')}</div>
     <div class="preview-toolbar">
       <button class="btn btn-secondary btn-sm" id="preview-open-folder">Open Folder</button>
